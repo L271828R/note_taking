@@ -10,30 +10,23 @@ if [[ ! -d "$NOTE_DIR" ]]; then
   exit 1
 fi
 
-# echo "DEBUG: NOTE_DIR is '$NOTE_DIR'"
-
 # 2) Read the first non-blank line from 'current'
 current=""
 if [[ -f "$CURRENT_FILE" ]]; then
   current=$(awk 'NR==1 { gsub(/^[ \t]+|[ \t]+$/, ""); print; exit }' "$CURRENT_FILE")
-  # echo "DEBUG: Read current line as: '$current'"
 fi
 
 # 3) Determine the target path
 if [[ -n "$current" ]]; then
   TARGET="$NOTE_DIR/$current"
   if [[ ! -d "$TARGET" ]]; then
-    # echo "Warning: '$current' not found under $NOTE_DIR, listing all .md instead." >&2
     TARGET="$NOTE_DIR"
   fi
 else
   TARGET="$NOTE_DIR"
 fi
 
-# echo "DEBUG: TARGET is '$TARGET'"
-
 # 4) Gather and enumerate .md files sorted by update date (newest first)
-# Use a shell loop with BSD stat to get the modification time and file name.
 mapfile -t file_list < <(
   shopt -s nullglob
   for file in "$TARGET"/*.md; do
@@ -45,10 +38,32 @@ mapfile -t file_list < <(
   done | sort -n -r
 )
 
-#echo "DEBUG: Found ${#file_list[@]} .md files"
-#for file in "${file_list[@]}"; do
-  #echo "DEBUG: File info: $file"
-#done
+# If the script was called with -delete <number>, process deletion.
+if [[ "$1" == "-delete" && -n "$2" ]]; then
+  delete_index="$2"
+  # Check that the provided number is valid
+  if (( delete_index < 1 || delete_index > ${#file_list[@]} )); then
+    echo "Error: Invalid file number '$delete_index'."
+    exit 1
+  fi
+
+  # Extract file info; array indices are 0-based
+  IFS='|' read -r epoch filename <<< "${file_list[delete_index-1]}"
+  file_to_delete="$TARGET/$filename"
+
+  if [[ ! -f "$file_to_delete" ]]; then
+    echo "Error: File '$file_to_delete' not found."
+    exit 1
+  fi
+
+  # Create the deletion directory if it doesn't exist
+  delete_dir="/tmp/notes/delete"
+  mkdir -p "$delete_dir"
+
+  mv "$file_to_delete" "$delete_dir"
+  echo "Moved '$file_to_delete' to '$delete_dir'."
+  exit 0
+fi
 
 # ANSI escape codes for green and reset
 GREEN='\033[0;32m'
@@ -60,7 +75,6 @@ RESET='\033[0m'
     IFS='|' read -r epoch filename <<< "${file_list[i]}"
     # Convert epoch to human-readable date (YYYY-MM-DD HH:MM:SS) using BSD date (-r)
     datetime=$(date -r "$epoch" "+%Y-%m-%d %H:%M:%S")
-    #echo "DEBUG: For file '$filename', epoch: '$epoch', datetime: '$datetime'"
     printf "%d. %s ${GREEN}%s${RESET}\n" $((i+1)) "$filename" "$datetime"
   done
 } | tee "$RESULTS_FILE"
