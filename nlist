@@ -10,34 +10,58 @@ if [[ ! -d "$NOTE_DIR" ]]; then
   exit 1
 fi
 
+# echo "DEBUG: NOTE_DIR is '$NOTE_DIR'"
+
 # 2) Read the first non-blank line from 'current'
 current=""
 if [[ -f "$CURRENT_FILE" ]]; then
-  current=$(sed -n '1s/^[[:space:]]*//;1s/[[:space:]]*$//p' "$CURRENT_FILE")
+  current=$(awk 'NR==1 { gsub(/^[ \t]+|[ \t]+$/, ""); print; exit }' "$CURRENT_FILE")
+  # echo "DEBUG: Read current line as: '$current'"
 fi
 
 # 3) Determine the target path
 if [[ -n "$current" ]]; then
   TARGET="$NOTE_DIR/$current"
   if [[ ! -d "$TARGET" ]]; then
-    echo "Warning: '$current' not found under $NOTE_DIR, listing all .md instead." >&2
+    # echo "Warning: '$current' not found under $NOTE_DIR, listing all .md instead." >&2
     TARGET="$NOTE_DIR"
   fi
 else
   TARGET="$NOTE_DIR"
 fi
 
-# 4) Gather and enumerate .md files
-mapfile -t files < <(
-  lsd -1 "$TARGET"/*.md 2>/dev/null \
-    | xargs -r -n1 basename \
-    | sort
+# echo "DEBUG: TARGET is '$TARGET'"
+
+# 4) Gather and enumerate .md files sorted by update date (newest first)
+# Use a shell loop with BSD stat to get the modification time and file name.
+mapfile -t file_list < <(
+  shopt -s nullglob
+  for file in "$TARGET"/*.md; do
+    if [[ -f "$file" ]]; then
+      mod=$(stat -f "%m" "$file")
+      name=$(basename "$file")
+      echo "$mod|$name"
+    fi
+  done | sort -n -r
 )
 
-# 5) Write enumerated list to results.txt and also print it
+#echo "DEBUG: Found ${#file_list[@]} .md files"
+#for file in "${file_list[@]}"; do
+  #echo "DEBUG: File info: $file"
+#done
+
+# ANSI escape codes for green and reset
+GREEN='\033[0;32m'
+RESET='\033[0m'
+
+# 5) Write enumerated list to RESULTS_FILE and print it with the update date in green
 {
-  for i in "${!files[@]}"; do
-    printf "%d. %s\n" $((i+1)) "${files[i]}"
+  for i in "${!file_list[@]}"; do
+    IFS='|' read -r epoch filename <<< "${file_list[i]}"
+    # Convert epoch to human-readable date (YYYY-MM-DD HH:MM:SS) using BSD date (-r)
+    datetime=$(date -r "$epoch" "+%Y-%m-%d %H:%M:%S")
+    #echo "DEBUG: For file '$filename', epoch: '$epoch', datetime: '$datetime'"
+    printf "%d. %s ${GREEN}%s${RESET}\n" $((i+1)) "$filename" "$datetime"
   done
 } | tee "$RESULTS_FILE"
 
