@@ -1,0 +1,39 @@
+#!/bin/bash
+
+NOTE_DIR="$NOTES_FOLDERS_PATH"
+CURRENT_FILE="$NOTES_CURRENT_FILE"
+RESULTS_FILE="$NOTES_RESULTS_FILE"
+current=$(awk 'NF{print; exit}' "$CURRENT_FILE")
+
+#if [ -z "$1" ]; then
+    #echo "Usage: $0 <number>"
+    #exit 1
+    #1="1"
+#fi
+
+# Check if the results file exists in the NOTE_DIR.
+if [ ! -f "$RESULTS_FILE" ]; then
+    echo "Error: ${RESULTS_FILE} not found. Please ensure you have generated it."
+    exit 1
+fi
+
+arg=${1:-1}
+#echo "arg=$arg"
+
+# Extract the filename corresponding to the provided number from results.txt
+filename=$(awk -v num="$arg" '$1 == num {print $2}' "$RESULTS_FILE")
+
+if [ -z "$filename" ]; then
+    echo "No file found for number $1 in ${RESULTS_FILE}"
+    exit 1
+fi
+
+# Check if the file exists in NOTE_DIR before opening it.
+if [ ! -f "${NOTE_DIR}/$current/${filename}" ]; then
+    echo "Error: File ${NOTE_DIR}/$current/${filename} does not exist."
+    exit 1
+fi
+
+# Open the file in nvim from the desired directory.
+nvim "${NOTE_DIR}/$current/${filename}"
+

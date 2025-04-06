@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# newnote.sh: Create a new note if it doesn't exist, set it as “current”, and open it in nvim.
+
+# Directory where the notes are stored.
+NOTE_DIR="$NOTES_FOLDERS_PATH"
+CURRENT_FILE="$NOTES_CURRENT_FILE"
+current=$(awk 'NF{print; exit}' "$CURRENT_FILE")
+
+# Check if a filename was provided.
+if [[ -z "$1" ]]; then
+  echo "Usage: $0 <filename>"
+  exit 1
+fi
+
+# Create the full file path.
+FILE="$NOTE_DIR/$current/$1"
+
+# If the file doesn't exist, create it.
+if [[ ! -e "$FILE" ]]; then
+  touch "$FILE"
+fi
+
+# Open the file in nvim.
+nvim "$FILE"
+

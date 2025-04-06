@@ -1,0 +1,11 @@
+
+
+  ngrep ( uses ripgrep )
+  nlist ( shows current notes )
+  nnote ( ceates new note, pass filename.md )
+  nresults ( prints results.txt file with file index and name )
+  nopen ( based on nresults it takes an index and opens file ) 
+  nsearch ( searches with ngrep and saves file names to results.txt )
+  ncurrent ( shows folders and current and allows you to set current )
+
+

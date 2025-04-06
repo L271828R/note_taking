@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+cat "$NOTES_RESULTS_FILE"

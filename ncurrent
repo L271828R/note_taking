@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+
+# Directory to scan — change this or export DIR_PATH before running
+FOLDERS_PATH="$NOTES_FOLDERS_PATH"
+DIR_PATH="$NOTES_PATH"
+echo "======"
+echo "$DIR_PATH"
+echo "======"
+
+# Handle -new parameter to create a new folder
+if [[ "$1" == "-new" ]]; then
+  if [[ -z "$2" ]]; then
+    echo "Usage: $0 -new <folder_name>" >&2
+    exit 1
+  fi
+  mkdir -p "$FOLDERS_PATH/$2" && echo "Folder '$2' created."
+  exit 0
+fi
+
+# 1) Gather immediate sub‑directories via globbing
+mapfile -t folders < <(
+  for d in "$FOLDERS_PATH"/*/; do
+    [[ -d "$d" ]] && basename "$d"
+  done | sort
+)
+
+# If a choice index is passed, set current and exit
+if [[ $# -ge 1 ]]; then
+  idx="$1"
+  # validate it's a number within range
+  if ! [[ "$idx" =~ ^[0-9]+$ ]] \
+     || (( idx < 1 || idx > ${#folders[@]} )); then
+    echo "Invalid selection: $idx" >&2
+    exit 1
+  fi
+  selected="${folders[$((idx-1))]}"
+  echo "$selected" > "$DIR_PATH/current"
+  exit 0
+fi
+
+# No args: enumerate folders
+for i in "${!folders[@]}"; do
+  printf "%d. %s\n" $((i+1)) "${folders[i]}"
+done
+
+# Read the 'current' file (first non‑empty line) or fall back to N/A
+current="N/A"
+if [[ -f "$DIR_PATH/current" ]]; then
+  line=$(awk 'NF { print; exit }' "$DIR_PATH/current")
+  [[ -n "$line" ]] && current="$line"
+fi
+
+printf "\ncurrent > %s\n" "$current"
+
+
