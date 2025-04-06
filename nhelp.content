@@ -1,11 +1,18 @@
 
 
   ngrep ( uses ripgrep )
+	ngrep <string to search> , to search in what ever folder current
+	is pointing to.
   nlist ( shows current notes )
+	nlist , to list all notes current is pointing to
+	nlist -delete <number> , to delete note
   nnote ( ceates new note, pass filename.md )
   nresults ( prints results.txt file with file index and name )
   nopen ( based on nresults it takes an index and opens file ) 
+	nopen , to open the first in the list in results.txt
   nsearch ( searches with ngrep and saves file names to results.txt )
+	nsearch < string to search > to get names of notes with your
+	search results
   ncurrent ( shows folders and current and allows you to set current )
 	ncurrent -new <folder> , to create a new folder
 
