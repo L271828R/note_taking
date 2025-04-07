@@ -1,81 +1,65 @@
 #!/usr/bin/env bash
+#
+# ncurrent.sh
+# 1) Enumerate .md files (with color in the timestamp)
+# 2) Write to $NOTES_RESULTS_FILE
+# 3) Invoke plugins in nlist_plugins/
+# 4) Print final
+
+# resolve script dir (for finding nlist_plugins/)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 NOTE_DIR="$NOTES_FOLDERS_PATH"
 CURRENT_FILE="$NOTES_CURRENT_FILE"
 RESULTS_FILE="$NOTES_RESULTS_FILE"
+PLUGIN_DIR="$SCRIPT_DIR/nlist_plugins"
 
-# 1) Make sure NOTE_DIR exists
+# 1) ensure NOTE_DIR exists
 if [[ ! -d "$NOTE_DIR" ]]; then
-  echo "Error: $NOTE_DIR not found." >&2
+  echo "Error: NOTE_DIR '$NOTE_DIR' not found." >&2
   exit 1
 fi
 
-# 2) Read the first non-blank line from 'current'
+# 2) determine TARGET (possibly a subfolder named by the first line of CURRENT_FILE)
 current=""
 if [[ -f "$CURRENT_FILE" ]]; then
   current=$(awk 'NR==1 { gsub(/^[ \t]+|[ \t]+$/, ""); print; exit }' "$CURRENT_FILE")
 fi
-
-# 3) Determine the target path
-if [[ -n "$current" ]]; then
+if [[ -n "$current" && -d "$NOTE_DIR/$current" ]]; then
   TARGET="$NOTE_DIR/$current"
-  if [[ ! -d "$TARGET" ]]; then
-    TARGET="$NOTE_DIR"
-  fi
 else
   TARGET="$NOTE_DIR"
 fi
 
-# 4) Gather and enumerate .md files sorted by update date (newest first)
+# 3) gather & enumerate .md files (newest first), with color on the date
 mapfile -t file_list < <(
   shopt -s nullglob
-  for file in "$TARGET"/*.md; do
-    if [[ -f "$file" ]]; then
-      mod=$(stat -f "%m" "$file")
-      name=$(basename "$file")
-      echo "$mod|$name"
-    fi
-  done | sort -n -r
+  for f in "$TARGET"/*.md; do
+    [[ -f "$f" ]] || continue
+    echo "$(stat -f "%m" "$f")|$(basename "$f")"
+  done | sort -nr
 )
 
-# If the script was called with -delete <number>, process deletion.
-if [[ "$1" == "-delete" && -n "$2" ]]; then
-  delete_index="$2"
-  # Check that the provided number is valid
-  if (( delete_index < 1 || delete_index > ${#file_list[@]} )); then
-    echo "Error: Invalid file number '$delete_index'."
-    exit 1
-  fi
-
-  # Extract file info; array indices are 0-based
-  IFS='|' read -r epoch filename <<< "${file_list[delete_index-1]}"
-  file_to_delete="$TARGET/$filename"
-
-  if [[ ! -f "$file_to_delete" ]]; then
-    echo "Error: File '$file_to_delete' not found."
-    exit 1
-  fi
-
-  # Create the deletion directory if it doesn't exist
-  delete_dir="/tmp/notes/delete"
-  mkdir -p "$delete_dir"
-
-  mv "$file_to_delete" "$delete_dir"
-  echo "Moved '$file_to_delete' to '$delete_dir'."
-  exit 0
-fi
-
-# ANSI escape codes for green and reset
 GREEN='\033[0;32m'
 RESET='\033[0m'
 
-# 5) Write enumerated list to RESULTS_FILE and print it with the update date in green
 {
   for i in "${!file_list[@]}"; do
-    IFS='|' read -r epoch filename <<< "${file_list[i]}"
-    # Convert epoch to human-readable date (YYYY-MM-DD HH:MM:SS) using BSD date (-r)
-    datetime=$(date -r "$epoch" "+%Y-%m-%d %H:%M:%S")
-    printf "%d. %s ${GREEN}%s${RESET}\n" $((i+1)) "$filename" "$datetime"
+    IFS='|' read -r epoch name <<< "${file_list[i]}"
+    dt=$(date -r "$epoch" "+%Y-%m-%d %H:%M:%S")
+    # **THIS** is where the color lives:
+    printf "%d. %s ${GREEN}%s${RESET}\n" $((i+1)) "$name" "$dt"
   done
-} | tee "$RESULTS_FILE"
+} > "$RESULTS_FILE"
+
+# 4) run each executable plugin (they all get RESULTS_FILE + TARGET)
+if [[ -d "$PLUGIN_DIR" ]]; then
+  for plugin in "$PLUGIN_DIR"/*.sh; do
+    [[ -x "$plugin" ]] || continue
+    "$plugin" "$RESULTS_FILE" "$TARGET"
+  done
+fi
+
+# 5) print it out (with colors intact)
+cat "$RESULTS_FILE"
 
