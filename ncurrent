@@ -34,8 +34,9 @@ if [[ $# -ge 1 && "$1" =~ ^[0-9]+$ ]]; then
 fi
 
 # 3) No args: enumerate folders in columns of ROWS rows each
+current=$(awk 'NF{print; exit}' "$NOTES_CURRENT_FILE")
 echo
-echo "available"
+echo "current > $current"
 echo "--------------------------"
 
 # default rows per column (override by exporting ROWS)
@@ -79,5 +80,4 @@ if [[ -f "$DIR_PATH/current" ]]; then
   read -r line < <(awk 'NF{print;exit}' "$DIR_PATH/current")
   [[ -n "$line" ]] && current="$line"
 fi
-printf "current > %s\n\n" "$current"
 

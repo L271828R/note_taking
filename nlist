@@ -62,7 +62,7 @@ fi
 
 # 5) print it out (with colors intact)
 echo ""
-echo "$current"
+echo "current > $current"
 echo "-------------------------------------------------"
 cat "$RESULTS_FILE"
 echo ""
