@@ -1,11 +1,8 @@
 #!/usr/bin/env bash
 
-# Directory to scan — change this or export DIR_PATH before running
+# Directory to scan — change this or export NOTES_FOLDERS_PATH/NOTES_PATH before running
 FOLDERS_PATH="$NOTES_FOLDERS_PATH"
 DIR_PATH="$NOTES_PATH"
-echo "======"
-echo "$DIR_PATH"
-echo "======"
 
 # Handle -new parameter to create a new folder
 if [[ "$1" == "-new" ]]; then
@@ -19,37 +16,68 @@ fi
 
 # 1) Gather immediate sub‑directories via globbing
 mapfile -t folders < <(
+  shopt -s nullglob
   for d in "$FOLDERS_PATH"/*/; do
     [[ -d "$d" ]] && basename "$d"
   done | sort
 )
 
-# If a choice index is passed, set current and exit
-if [[ $# -ge 1 ]]; then
-  idx="$1"
-  # validate it's a number within range
-  if ! [[ "$idx" =~ ^[0-9]+$ ]] \
-     || (( idx < 1 || idx > ${#folders[@]} )); then
+# 2) If a numeric choice is passed, set current and exit
+if [[ $# -ge 1 && "$1" =~ ^[0-9]+$ ]]; then
+  idx=$1
+  if (( idx < 1 || idx > ${#folders[@]} )); then
     echo "Invalid selection: $idx" >&2
     exit 1
   fi
-  selected="${folders[$((idx-1))]}"
-  echo "$selected" > "$DIR_PATH/current"
+  echo "${folders[idx-1]}" > "$DIR_PATH/current"
   exit 0
 fi
 
-# No args: enumerate folders
-for i in "${!folders[@]}"; do
-  printf "%d. %s\n" $((i+1)) "${folders[i]}"
+# 3) No args: enumerate folders in columns of ROWS rows each
+echo
+echo "available"
+echo "--------------------------"
+
+# default rows per column (override by exporting ROWS)
+: "${ROWS:=5}"
+num=${#folders[@]}
+cols=$(( (num + ROWS - 1) / ROWS ))
+
+# compute widest folder name
+maxlen=0
+for name in "${folders[@]}"; do
+  (( ${#name} > maxlen )) && maxlen=${#name}
 done
 
-# Read the 'current' file (first non‑empty line) or fall back to N/A
+# width of the largest index (e.g. "10" → 2)
+idxw=${#num}
+
+# total field width: "NN. " + name + 2 spaces padding
+fieldw=$(( idxw + 2 + maxlen + 2 ))
+
+for (( r=0; r<ROWS; r++ )); do
+  line=""
+  for (( c=0; c<cols; c++ )); do
+    i=$(( c*ROWS + r ))
+    if (( i < num )); then
+      numstr=$(( i+1 ))
+      name=${folders[i]}
+      # left‑pad each cell to fixed width
+      printf -v cell "%-${fieldw}s" "${numstr}. ${name}"
+      line+="$cell"
+    fi
+  done
+  # only print non‑empty rows
+  [[ -n "$line" ]] && echo "$line"
+done
+
+# 4) Read the 'current' file (first non‑empty line) or fall back to N/A
+echo
+echo "--------------------------"
 current="N/A"
 if [[ -f "$DIR_PATH/current" ]]; then
-  line=$(awk 'NF { print; exit }' "$DIR_PATH/current")
+  read -r line < <(awk 'NF{print;exit}' "$DIR_PATH/current")
   [[ -n "$line" ]] && current="$line"
 fi
-
-printf "\ncurrent > %s\n" "$current"
-
+printf "current > %s\n\n" "$current"
 
