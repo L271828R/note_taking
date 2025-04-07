@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 #
 # ncurrent.sh
-# 1) Enumerate .md files (with color in the timestamp)
-# 2) Write to $NOTES_RESULTS_FILE
-# 3) Invoke plugins in nlist_plugins/
-# 4) Print final
+# 1) Handle -delete
+# 2) Enumerate .md files (with color in the timestamp)
+# 3) Write to $NOTES_RESULTS_FILE
+# 4) Invoke plugins in nlist_plugins/
+# 5) Print final
 
 # resolve script dir (for finding nlist_plugins/)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -31,7 +32,7 @@ else
   TARGET="$NOTE_DIR"
 fi
 
-# 3) gather & enumerate .md files (newest first), with color on the date
+# 3) gather & enumerate .md files (newest first) into an array
 mapfile -t file_list < <(
   shopt -s nullglob
   for f in "$TARGET"/*.md; do
@@ -40,19 +41,40 @@ mapfile -t file_list < <(
   done | sort -nr
 )
 
+# 4) If called with -delete <n>, move that file to /tmp/notes/delete and exit
+if [[ "$1" == "-delete" && "$2" =~ ^[0-9]+$ ]]; then
+  idx=$2
+  if (( idx < 1 || idx > ${#file_list[@]} )); then
+    echo "Error: Invalid file number '$idx'." >&2
+    exit 1
+  fi
+  IFS='|' read -r epoch filename <<< "${file_list[idx-1]}"
+  src="$TARGET/$filename"
+  if [[ ! -f "$src" ]]; then
+    echo "Error: File '$src' not found." >&2
+    exit 1
+  fi
+  delete_dir="/tmp/notes/delete"
+  mkdir -p "$delete_dir"
+  mv "$src" "$delete_dir"
+  echo "Moved '$src' → '$delete_dir/'."
+  exit 0
+fi
+
+# 5) (Optional) handle -rename <n> <newname> here…
+
+# 6) Now produce the RESULTS_FILE listing
 GREEN='\033[0;32m'
 RESET='\033[0m'
-
 {
   for i in "${!file_list[@]}"; do
     IFS='|' read -r epoch name <<< "${file_list[i]}"
     dt=$(date -r "$epoch" "+%Y-%m-%d %H:%M:%S")
-    # **THIS** is where the color lives:
     printf "%d. %s ${GREEN}%s${RESET}\n" $((i+1)) "$name" "$dt"
   done
 } > "$RESULTS_FILE"
 
-# 4) run each executable plugin (they all get RESULTS_FILE + TARGET)
+# 7) Run each executable plugin (they all get RESULTS_FILE + TARGET)
 if [[ -d "$PLUGIN_DIR" ]]; then
   for plugin in "$PLUGIN_DIR"/*.sh; do
     [[ -x "$plugin" ]] || continue
@@ -60,7 +82,7 @@ if [[ -d "$PLUGIN_DIR" ]]; then
   done
 fi
 
-# 5) print it out (with colors intact)
+# 8) Print final
 echo ""
 echo "current > $current"
 echo "-------------------------------------------------"
