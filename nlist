@@ -61,5 +61,9 @@ if [[ -d "$PLUGIN_DIR" ]]; then
 fi
 
 # 5) print it out (with colors intact)
+echo ""
+echo "$current"
+echo "-------------------------------------------------"
 cat "$RESULTS_FILE"
+echo ""
 
