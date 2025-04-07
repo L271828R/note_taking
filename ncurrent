@@ -74,7 +74,6 @@ done
 
 # 4) Read the 'current' file (first non‑empty line) or fall back to N/A
 echo
-echo "--------------------------"
 current="N/A"
 if [[ -f "$DIR_PATH/current" ]]; then
   read -r line < <(awk 'NF{print;exit}' "$DIR_PATH/current")
