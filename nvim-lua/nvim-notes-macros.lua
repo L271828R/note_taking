@@ -34,3 +34,33 @@ vim.api.nvim_create_autocmd("BufWritePre", {
   end,
 })
 
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = "markdown",
+  callback = function()
+    local function open_markdown_url_under_cursor()
+      local line = vim.api.nvim_get_current_line()
+      local col = vim.fn.col(".")
+      local before = line:sub(1, col)
+      local after = line:sub(col)
+
+      -- try to match a markdown link in the full line
+      local full_link = line:match("%[.-%]%((.-)%)")
+      if full_link and full_link:match("^https?://") then
+        vim.fn.jobstart({ "open", full_link }, { detach = true })
+        return
+      end
+
+      -- fallback: try getting word under cursor
+      local word = vim.fn.expand("<cfile>")
+      if word:match("^https?://") then
+        vim.fn.jobstart({ "open", word }, { detach = true })
+      else
+        vim.cmd("edit " .. word)
+      end
+    end
+
+    vim.keymap.set("n", "gf", open_markdown_url_under_cursor, { buffer = true })
+    vim.keymap.set("n", "gd", open_markdown_url_under_cursor, { buffer = true })
+  end,
+})
+
