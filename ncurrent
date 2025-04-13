@@ -1,14 +1,26 @@
 #!/usr/bin/env bash
 
+# ─────────────────────────────────────────────────────────────────────────────
+# ncurrent — Current Folder Manager with .note_map.json sync + logging
+# ─────────────────────────────────────────────────────────────────────────────
+
 FOLDERS_PATH="$NOTES_FOLDERS_PATH"
 DIR_PATH="$NOTES_PATH"
 CURRENT_FILE="$DIR_PATH/current"
+MAP_FILE="$DIR_PATH/.note_map.json"
+LOG_FILE="$DIR_PATH/.note_map.log"
 
-# Read current path
+timestamp() { date "+%Y-%m-%d %H:%M:%S"; }
+write_log() { echo "$(timestamp)  $*" >> "$LOG_FILE"; }
+
+write_log "=== ncurrent invoked with: $* ==="
+
+# Read current
 current=$(awk 'NF{print; exit}' "$CURRENT_FILE" 2>/dev/null)
 TARGET_PATH="$FOLDERS_PATH${current:+/$current}"
+write_log "Current folder: ${current:-[root]} (full: $TARGET_PATH)"
 
-# Prevent going above FOLDERS_PATH
+# Helpers
 sanitize() {
   local path="$1"
   local resolved
@@ -16,7 +28,53 @@ sanitize() {
   [[ "$resolved" == "$FOLDERS_PATH"* && "$resolved" != "$(dirname "$FOLDERS_PATH")" ]]
 }
 
-# Show help
+# Ensure map & log exist
+[[ -f "$MAP_FILE" ]] || { echo "{}" > "$MAP_FILE"; write_log "Created empty map"; }
+[[ -f "$LOG_FILE" ]] || touch "$LOG_FILE"
+
+# update_map_for_dir: remove old entries, re‑add all .md under new dir
+update_map_for_dir() {
+  local base_dir="$1" old_rel="$2" tmp
+  write_log "update_map_for_dir: base_dir=$base_dir old_rel=$old_rel"
+
+  # 1) remove entries under old_rel
+  tmp=$(mktemp)
+  if jq "with_entries(select(.value.path|startswith(\"$old_rel\")|not))" "$MAP_FILE" > "$tmp"; then
+    mv "$tmp" "$MAP_FILE"
+    write_log "  Removed map entries starting with '$old_rel'"
+  else
+    write_log "  ERROR: failed to prune old entries"
+    rm -f "$tmp"
+  fi
+
+  # 2) re‑scan new dir
+  find "$base_dir" -type f -name '*.md' | while read -r f; do
+    local id title rel
+    id=$(grep -m1 '^<!-- id:' "$f" 2>/dev/null \
+         | sed -E 's/<!-- id: ([0-9a-f]+) -->/\1/')
+    [[ -z $id ]] && { write_log "  Skip $f (no id)"; continue; }
+
+    title=$(grep -m1 '^# *Title:' "$f" 2>/dev/null \
+            | sed -E 's/^# *Title: *(.+)/\1/')
+    [[ -z $title ]] && title=$(basename "$f" .md)
+
+    rel="${f#$DIR_PATH/}"
+    tmp=$(mktemp)
+    if jq --arg id "$id" --arg path "$rel" --arg title "$title" \
+          '.[$id]={path:$path,title:$title}' "$MAP_FILE" > "$tmp"; then
+      mv "$tmp" "$MAP_FILE"
+      write_log "  Added/updated: id=$id path=$rel title='$title'"
+    else
+      write_log "  ERROR: failed to add $f"
+      rm -f "$tmp"
+    fi
+  done
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Commands
+# ─────────────────────────────────────────────────────────────────────────────
+
 if [[ "$1" == "-help" ]]; then
   cat <<EOF
 
@@ -26,195 +84,163 @@ Usage: nc [option] or [index]
 
 🔍 Navigation
   -pwd               Show current folder path
-  -cd <subfolder>    Enter a subfolder (if it exists)
-  -up / ..           Move up one folder (if not at root)
-  <number>           Set current folder to the listed index
+  -cd <subfolder>    Enter a subfolder
+  -up / ..           Move up one folder
+  <number>           Set current by index
 
 📁 Folder Ops
-  -new <name>        Create a folder inside current
-  -move <i> -to <j>  Move folder #i into folder #j
+  -new <name>        Create a folder
+  -move <i> -to <j>  Move folder #i → folder #j
   -move <i> -to up   Move folder #i up one level
-  -rename <i> <new>  Rename folder #i to 'new'
+  -rename <i> <new>  Rename folder #i
 
 🧭 Display
-  (no args)          List current folder contents
-  ROWS=<n> nc        Override rows per column display
+  (no args)          List contents
+  ROWS=<n> nc        Override rows per column
 
 🆘 Help
-  -help              Show this help message
-
-🛑 Constraints
-  You cannot move above \$NOTES_FOLDERS_PATH
-  Only folders inside this root are visible
+  -help              Show this message
 
 EOF
+  write_log "Displayed help"
   exit 0
 fi
 
-# Handle: -pwd
 if [[ "$1" == "-pwd" ]]; then
   echo "${current:-[root]}"
+  write_log "Printed pwd: ${current:-[root]}"
   exit 0
 fi
 
-# Handle: -cd <subfolder>
 if [[ "$1" == "-cd" && -n "$2" ]]; then
   new_path="${current:+$current/}$2"
-  full_path="$FOLDERS_PATH/$new_path"
-  if [[ -d "$full_path" ]] && sanitize "$full_path"; then
+  full="$FOLDERS_PATH/$new_path"
+  if [[ -d "$full" ]] && sanitize "$full"; then
     echo "$new_path" > "$CURRENT_FILE"
+    write_log "cd → $new_path"
     echo "Moved into: $new_path"
   else
-    echo "Subfolder '$2' not found or not allowed." >&2
+    write_log "ERROR: cd failed: $2"
+    echo "Subfolder '$2' not found." >&2
     exit 1
   fi
   exit 0
 fi
 
-# Handle: -up and ".."
-if [[ "$1" == ".." ]]; then
-  set -- "-up"
-fi
-
+if [[ "$1" == ".." ]]; then set -- "-up"; fi
 if [[ "$1" == "-up" ]]; then
   if [[ -z "$current" ]]; then
+    write_log "ERROR: already at root"
     echo "Already at root." >&2
     exit 1
   fi
   new_path="${current%/*}"
   [[ "$new_path" == "$current" ]] && new_path=""
   echo "$new_path" > "$CURRENT_FILE"
+  write_log "up → ${new_path:-[root]}"
   echo "Moved up to: ${new_path:-[root]}"
   exit 0
 fi
 
-# Handle: -new <folder>
 if [[ "$1" == "-new" && -n "$2" ]]; then
-  mkdir -p "$TARGET_PATH/$2" && echo "Folder '$2' created in ${current:-[root]}"
+  mkdir -p "$TARGET_PATH/$2" && {
+    write_log "Created folder '$2' in ${current:-[root]}"
+    echo "Folder '$2' created"
+  }
   exit 0
 fi
 
-# Handle: -move <i> -to <j> or 'up'
 if [[ "$1" == "-move" && "$2" =~ ^[0-9]+$ && "$3" == "-to" ]]; then
   mapfile -t folders < <(find "$TARGET_PATH" -mindepth 1 -maxdepth 1 -type d | sort)
-  from_idx=$2
-  if (( from_idx < 1 || from_idx > ${#folders[@]} )); then
-    echo "Invalid source index." >&2
-    exit 1
-  fi
-  src="${folders[from_idx-1]}"
-  base="$(basename "$src")"
-
+  from=$2; src="${folders[from-1]}"; base="$(basename "$src")"
   if [[ "$4" == "up" ]]; then
-    parent_path=$(dirname "$TARGET_PATH")
-    if ! sanitize "$parent_path"; then
-      echo "Cannot move above root." >&2
-      exit 1
+    parent=$(dirname "$TARGET_PATH")
+    if ! sanitize "$parent"; then
+      write_log "ERROR: move up not allowed"
+      echo "Cannot move above root." >&2; exit 1
     fi
-    dst="$parent_path/$base"
+    dst="$parent/$base"
   elif [[ "$4" =~ ^[0-9]+$ ]]; then
-    to_idx=$4
-    if (( to_idx < 1 || to_idx > ${#folders[@]} )); then
-      echo "Invalid destination index." >&2
-      exit 1
-    fi
-    dst="${folders[to_idx-1]}/$base"
+    to=$4; dst="${folders[to-1]}/$base"
   else
-    echo "Invalid destination — use index or 'up'" >&2
-    exit 1
-  fi
-
-  if [[ -e "$dst" ]]; then
-    echo "Destination '$dst' already exists." >&2
-    exit 1
+    write_log "ERROR: invalid move dest: $4"
+    echo "Invalid destination." >&2; exit 1
   fi
 
   if mv "$src" "$dst"; then
-    echo "Moved '$base' to '$(dirname "$dst")'"
+    echo "Moved '$base' → '$(dirname "$dst")'"
+    write_log "Moved $src → $dst"
+    old_rel="${src#$DIR_PATH/}"
+    update_map_for_dir "$dst" "$old_rel"
   else
-    echo "Move failed." >&2
+    write_log "ERROR: mv failed $src → $dst"
+    echo "Move failed." >&2; exit 1
   fi
   exit 0
 fi
 
-# 🆕 Handle: -rename <index> <new_name>
 if [[ "$1" == "-rename" && "$2" =~ ^[0-9]+$ && -n "$3" ]]; then
   mapfile -t folders < <(find "$TARGET_PATH" -mindepth 1 -maxdepth 1 -type d | sort)
-  idx=$2
-  newname="$3"
-
-  if (( idx < 1 || idx > ${#folders[@]} )); then
-    echo "Invalid index: $idx" >&2
-    exit 1
-  fi
-
-  src="${folders[idx-1]}"
-  dst="$(dirname "$src")/$newname"
-
-  if [[ -e "$dst" ]]; then
-    echo "Destination folder already exists: $dst" >&2
-    exit 1
-  fi
-
+  idx=$2; newname="$3"
+  src="${folders[idx-1]}"; dst="$(dirname "$src")/$newname"
   if mv "$src" "$dst"; then
     echo "Renamed '$(basename "$src")' → '$newname'"
+    write_log "Renamed $src → $dst"
+    old_rel="${src#$DIR_PATH/}"
+    update_map_for_dir "$dst" "$old_rel"
   else
-    echo "Failed to rename '$src'" >&2
-    exit 1
+    write_log "ERROR: rename failed $src → $dst"
+    echo "Rename failed." >&2; exit 1
   fi
   exit 0
 fi
 
-# Handle: <number> to select current folder
+# select by index
 mapfile -t folders < <(find "$TARGET_PATH" -mindepth 1 -maxdepth 1 -type d | sort)
 if [[ "$1" =~ ^[0-9]+$ ]]; then
   idx=$1
-  if (( idx < 1 || idx > ${#folders[@]} )); then
-    echo "Invalid selection: $idx" >&2
-    exit 1
-  fi
-  rel_path="${folders[idx-1]#$FOLDERS_PATH/}"
-  echo "$rel_path" > "$CURRENT_FILE"
-  echo "Switched current to: $rel_path"
+  rel="${folders[idx-1]#$FOLDERS_PATH/}"
+  echo "$rel" > "$CURRENT_FILE"
+  write_log "Selected current: $rel"
+  echo "Switched current to: $rel"
   exit 0
 fi
 
-# List folders
+# Default: list
 echo
 echo "current > ${current:-[root]}"
 echo "--------------------------"
 
-declare -a foldernames counts
-for folder in "${folders[@]}"; do
-  name="${folder##*/}"
-  foldernames+=("$name")
-  counts+=( $(find "$folder" -type f -name '*.md' 2>/dev/null | wc -l | tr -d '[:space:]') )
+declare -a names counts
+for f in "${folders[@]}"; do
+  names+=("${f##*/}")
+  counts+=( $(find "$f" -type f -name '*.md' | wc -l) )
 done
 
 : "${ROWS:=5}"
-num=${#foldernames[@]}
+num=${#names[@]}
 cols=$(( (num + ROWS - 1) / ROWS ))
 
-declare -a displays
 maxlen=0
-for i in "${!foldernames[@]}"; do
-  displays[i]="${foldernames[i]} (${counts[i]})"
-  (( ${#displays[i]} > maxlen )) && maxlen=${#displays[i]}
+for i in "${!names[@]}"; do
+  disp="${names[i]} (${counts[i]})"
+  (( ${#disp} > maxlen )) && maxlen=${#disp}
+  displays[i]="$disp"
 done
 
 idxw=${#num}
 fieldw=$(( idxw + 2 + maxlen + 2 ))
 
-for (( r=0; r<ROWS; r++ )); do
+for ((r=0; r<ROWS; r++)); do
   line=""
-  for (( c=0; c<cols; c++ )); do
-    i=$(( c*ROWS + r ))
+  for ((c=0; c<cols; c++)); do
+    i=$((c*ROWS+r))
     if (( i < num )); then
       printf -v cell "%-${fieldw}s" "$((i+1)). ${displays[i]}"
       line+="$cell"
     fi
   done
-  [[ -n "$line" ]] && echo "$line"
+  [[ -n $line ]] && echo "$line"
 done
 
 echo
