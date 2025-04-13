@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
 #
-# ncurrent.sh
-# 1) Handle -delete
-# 2) Enumerate .md files (with color in the timestamp)
+# nlist.sh
+# Enhanced to:
+# 1) List .md files (with timestamps and titles)
+# 2) List subfolders and count their .md files
 # 3) Write to $NOTES_RESULTS_FILE
-# 4) Invoke plugins in nlist_plugins/
-# 5) Print final
+# 4) Invoke plugins
+# 5) Support -delete
 
 # resolve script dir (for finding nlist_plugins/)
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}" )" && pwd)"
 
 NOTE_DIR="$NOTES_FOLDERS_PATH"
 CURRENT_FILE="$NOTES_CURRENT_FILE"
@@ -21,10 +22,10 @@ if [[ ! -d "$NOTE_DIR" ]]; then
   exit 1
 fi
 
-# 2) determine TARGET (possibly a subfolder named by the first line of CURRENT_FILE)
+# 2) determine TARGET
 current=""
 if [[ -f "$CURRENT_FILE" ]]; then
-  current=$(awk 'NR==1 { gsub(/^[ \t]+|[ \t]+$/, ""); print; exit }' "$CURRENT_FILE")
+  current=$(awk 'NF{gsub(/^[ \t]+|[ \t]+$/, ""); print; exit}' "$CURRENT_FILE")
 fi
 if [[ -n "$current" && -d "$NOTE_DIR/$current" ]]; then
   TARGET="$NOTE_DIR/$current"
@@ -32,7 +33,7 @@ else
   TARGET="$NOTE_DIR"
 fi
 
-# 3) gather & enumerate .md files (newest first) into an array
+# 3) gather .md files
 mapfile -t file_list < <(
   shopt -s nullglob
   for f in "$TARGET"/*.md; do
@@ -41,7 +42,7 @@ mapfile -t file_list < <(
   done | sort -nr
 )
 
-# 4) If called with -delete <n>, move that file to /tmp/notes/delete and exit
+# 4) If -delete is passed
 if [[ "$1" == "-delete" && "$2" =~ ^[0-9]+$ ]]; then
   idx=$2
   if (( idx < 1 || idx > ${#file_list[@]} )); then
@@ -61,20 +62,41 @@ if [[ "$1" == "-delete" && "$2" =~ ^[0-9]+$ ]]; then
   exit 0
 fi
 
-# 5) (Optional) handle -rename <n> <newname> here…
+# 5) Gather subfolders and .md file counts
+mapfile -t folder_list < <(
+  find "$TARGET" -mindepth 1 -maxdepth 1 -type d | sort
+)
 
-# 6) Now produce the RESULTS_FILE listing
+# 6) Write listing
 GREEN='\033[0;32m'
+BLUE='\033[1;34m'
 RESET='\033[0m'
+
 {
+  echo "📄 Markdown Files"
+  echo "----------------"
   for i in "${!file_list[@]}"; do
     IFS='|' read -r epoch name <<< "${file_list[i]}"
     dt=$(date -r "$epoch" "+%Y-%m-%d %H:%M:%S")
-    printf "%d. %s ${GREEN}%s${RESET}\n" $((i+1)) "$name" "$dt"
+    title=$(grep -m1 '^# Title:' "$TARGET/$name" 2>/dev/null | sed 's/^# Title:[[:space:]]*//')
+    if [[ -n "$title" ]]; then
+      printf "%d. %s — %s %b%s%b\n" $((i+1)) "$name" "$title" "$GREEN" "$dt" "$RESET"
+    else
+      printf "%d. %s %b%s%b\n" $((i+1)) "$name" "$GREEN" "$dt" "$RESET"
+    fi
+  done
+
+  echo ""
+  echo "📁 Subfolders"
+  echo "----------------"
+  for folder in "${folder_list[@]}"; do
+    subname=$(basename "$folder")
+    count=$(find "$folder" -type f -name '*.md' 2>/dev/null | wc -l | tr -d '[:space:]')
+    printf "• %b%s%b (%s files)\n" "$BLUE" "$subname" "$RESET" "$count"
   done
 } > "$RESULTS_FILE"
 
-# 7) Run each executable plugin (they all get RESULTS_FILE + TARGET)
+# 7) Run plugins
 if [[ -d "$PLUGIN_DIR" ]]; then
   for plugin in "$PLUGIN_DIR"/*.sh; do
     [[ -x "$plugin" ]] || continue
@@ -82,10 +104,10 @@ if [[ -d "$PLUGIN_DIR" ]]; then
   done
 fi
 
-# 8) Print final
+# 8) Print
 echo ""
 echo "current > $current"
-echo "-------------------------------------------------"
+echo "---------------------------------------------------------------------------------"
 cat "$RESULTS_FILE"
 echo ""
 

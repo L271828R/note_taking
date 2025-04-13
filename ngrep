@@ -14,14 +14,11 @@ if [[ ! -f "$CURRENT_FILE" ]]; then
 fi
 
 current=$(awk 'NF{print; exit}' "$CURRENT_FILE")
-echo $current
 if [[ -z "$current" ]]; then
   echo "Error: '$CURRENT_FILE' is empty or whitespace only" >&2
   exit 1
 fi
-echo "NOTE_DIR=$NOTE_DIR"
 SEARCH_DIR="$NOTE_DIR/$current"
-echo $SEARCH_DIR
 
 if [[ ! -d "$SEARCH_DIR" ]]; then
   echo "Error: folder '$current' not found under $NOTE_DIR" >&2

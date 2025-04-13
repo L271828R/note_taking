@@ -1,27 +1,49 @@
 #!/usr/bin/env bash
-# newnote.sh: Create a new note if it doesn't exist, set it as “current”, and open it in nvim.
+#
+# bin/nnote: Create or open a note, with plugin hooks and auto‑journal support.
 
-# Directory where the notes are stored.
-NOTE_DIR="$NOTES_FOLDERS_PATH"
-CURRENT_FILE="$NOTES_CURRENT_FILE"
+# ——— Configurable paths —————————————————————————————————————————————————
+NOTE_DIR="$NOTES_FOLDERS_PATH"          # e.g. /Users/luisrueda/projects/notes
+CURRENT_FILE="$NOTES_CURRENT_FILE"      # e.g. /Users/luisrueda/projects/notes/current
 DEFAULT_FILE="$NOTES_PATH/templates/default.md"
+# —————————————————————————————————————————————————————————————————————————
+
+# ——— Plugin hook: run each executable in nnote_plugins —————————————————
+PLUGIN_DIR="$(dirname "$0")/nnote_plugins"
+if [ -d "$PLUGIN_DIR" ]; then
+  for plugin in "$PLUGIN_DIR"/*; do
+    if [ -f "$plugin" ] && [ -x "$plugin" ]; then
+      "$plugin" "$@"      # call plugin with same args
+    fi
+  done
+fi
+# —————————————————————————————————————————————————————————————————————————
+
+# ——— Figure out which folder is “current” —————————————————————————————
+if [ ! -f "$CURRENT_FILE" ]; then
+  echo "ERROR: cannot read current file pointer: $CURRENT_FILE" >&2
+  exit 1
+fi
 current=$(awk 'NF{print; exit}' "$CURRENT_FILE")
 
-# Check if a filename was provided.
-if [[ -z "$1" ]]; then
-  echo "Usage: $0 <filename>"
+# ——— Auto‑journal: if no filename AND we’re in a journal folder, default to today ——
+if [ -z "$1" ] && [[ "$current" == *journal* ]]; then
+  set -- "$(date +%F).md"
+fi
+
+# ——— Require a filename argument ——————————————————————————————————————
+if [ -z "$1" ]; then
+  echo "Usage: $(basename "$0") <filename>"
   exit 1
 fi
 
-# Create the full file path.
+# ——— Build full path and create if needed —————————————————————————————
 FILE="$NOTE_DIR/$current/$1"
-
-# If the file doesn't exist, create it.
-if [[ ! -e "$FILE" ]]; then
-  touch "$FILE"
+if [ ! -e "$FILE" ]; then
+  mkdir -p "$(dirname "$FILE")"
   cp "$DEFAULT_FILE" "$FILE"
 fi
 
-# Open the file in nvim.
-nvim "$FILE"
+# ——— Open in your editor —————————————————————————————————————————————
+exec nvim "$FILE"
 

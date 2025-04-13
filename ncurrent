@@ -1,90 +1,190 @@
 #!/usr/bin/env bash
 
-# Directory to scan — change this or export NOTES_FOLDERS_PATH/NOTES_PATH before running
 FOLDERS_PATH="$NOTES_FOLDERS_PATH"
 DIR_PATH="$NOTES_PATH"
+CURRENT_FILE="$DIR_PATH/current"
 
-# Handle -new parameter to create a new folder
-if [[ "$1" == "-new" ]]; then
-  if [[ -z "$2" ]]; then
-    echo "Usage: $0 -new <folder_name>" >&2
-    exit 1
-  fi
-  mkdir -p "$FOLDERS_PATH/$2" && echo "Folder '$2' created."
+# Read current path
+current=$(awk 'NF{print; exit}' "$CURRENT_FILE" 2>/dev/null)
+TARGET_PATH="$FOLDERS_PATH${current:+/$current}"
+
+# Prevent going above FOLDERS_PATH
+sanitize() {
+  local path="$1"
+  local resolved
+  resolved=$(cd "$path" 2>/dev/null && pwd)
+  [[ "$resolved" == "$FOLDERS_PATH"* && "$resolved" != "$(dirname "$FOLDERS_PATH")" ]]
+}
+
+# Show help
+if [[ "$1" == "-help" ]]; then
+  cat <<EOF
+
+📝 ncurrent — Current Folder Manager
+------------------------------------
+Usage: nc [option] or [index]
+
+🔍 Navigation
+  -pwd               Show current folder path
+  -cd <subfolder>    Enter a subfolder (if it exists)
+  -up                Move up one folder (if not at root)
+  <number>           Set current folder to the listed index
+
+📁 Folder Ops
+  -new <name>        Create a folder inside current
+  -move <i> -to <j>  Move folder #i into folder #j
+  -move <i> -to up   Move folder #i up one level
+
+🧭 Display
+  (no args)          List current folder contents
+  ROWS=<n> nc        Override rows per column display
+
+🆘 Help
+  -help              Show this help message
+
+🛑 Constraints
+  You cannot move above \$NOTES_FOLDERS_PATH
+  Only folders inside this root are visible
+
+EOF
   exit 0
 fi
 
-# 1) Gather immediate sub‑directories via globbing
-mapfile -t folders < <(
-  shopt -s nullglob
-  for d in "$FOLDERS_PATH"/*/; do
-    [[ -d "$d" ]] && basename "$d"
-  done | sort
-)
+# Handle: -pwd
+if [[ "$1" == "-pwd" ]]; then
+  echo "${current:-[root]}"
+  exit 0
+fi
 
-# 2) Compute .md‑file counts for each folder
-declare -a counts
-for i in "${!folders[@]}"; do
-  folder="${folders[i]}"
-  shopt -s nullglob
-  md_files=( "$FOLDERS_PATH/$folder"/*.md )
-  counts[i]=${#md_files[@]}
-done
+# Handle: -cd <subfolder>
+if [[ "$1" == "-cd" && -n "$2" ]]; then
+  new_path="${current:+$current/}$2"
+  full_path="$FOLDERS_PATH/$new_path"
+  if [[ -d "$full_path" ]] && sanitize "$full_path"; then
+    echo "$new_path" > "$CURRENT_FILE"
+    echo "Moved into: $new_path"
+  else
+    echo "Subfolder '$2' not found or not allowed." >&2
+    exit 1
+  fi
+  exit 0
+fi
 
-# 3) If a numeric choice is passed, set current and exit
-if [[ $# -ge 1 && "$1" =~ ^[0-9]+$ ]]; then
+# Handle: -up
+if [[ "$1" == "-up" ]]; then
+  if [[ -z "$current" ]]; then
+    echo "Already at root." >&2
+    exit 1
+  fi
+  new_path="${current%/*}"
+  [[ "$new_path" == "$current" ]] && new_path=""
+  echo "$new_path" > "$CURRENT_FILE"
+  echo "Moved up to: ${new_path:-[root]}"
+  exit 0
+fi
+
+# Handle: -new <folder>
+if [[ "$1" == "-new" && -n "$2" ]]; then
+  mkdir -p "$TARGET_PATH/$2" && echo "Folder '$2' created in ${current:-[root]}"
+  exit 0
+fi
+
+# Handle: -move <i> -to <j> or 'up'
+if [[ "$1" == "-move" && "$2" =~ ^[0-9]+$ && "$3" == "-to" ]]; then
+  mapfile -t folders < <(find "$TARGET_PATH" -mindepth 1 -maxdepth 1 -type d | sort)
+  from_idx=$2
+  if (( from_idx < 1 || from_idx > ${#folders[@]} )); then
+    echo "Invalid source index." >&2
+    exit 1
+  fi
+  src="${folders[from_idx-1]}"
+  base="$(basename "$src")"
+
+  if [[ "$4" == "up" ]]; then
+    parent_path=$(dirname "$TARGET_PATH")
+    if ! sanitize "$parent_path"; then
+      echo "Cannot move above root." >&2
+      exit 1
+    fi
+    dst="$parent_path/$base"
+  elif [[ "$4" =~ ^[0-9]+$ ]]; then
+    to_idx=$4
+    if (( to_idx < 1 || to_idx > ${#folders[@]} )); then
+      echo "Invalid destination index." >&2
+      exit 1
+    fi
+    dst="${folders[to_idx-1]}/$base"
+  else
+    echo "Invalid destination — use index or 'up'" >&2
+    exit 1
+  fi
+
+  if [[ -e "$dst" ]]; then
+    echo "Destination '$dst' already exists." >&2
+    exit 1
+  fi
+
+  if mv "$src" "$dst"; then
+    echo "Moved '$base' to '$(dirname "$dst")'"
+  else
+    echo "Move failed." >&2
+  fi
+  exit 0
+fi
+
+# Handle: <number> to select current folder
+mapfile -t folders < <(find "$TARGET_PATH" -mindepth 1 -maxdepth 1 -type d | sort)
+if [[ "$1" =~ ^[0-9]+$ ]]; then
   idx=$1
   if (( idx < 1 || idx > ${#folders[@]} )); then
     echo "Invalid selection: $idx" >&2
     exit 1
   fi
-  echo "${folders[idx-1]}" > "$DIR_PATH/current"
+  rel_path="${folders[idx-1]#$FOLDERS_PATH/}"
+  echo "$rel_path" > "$CURRENT_FILE"
+  echo "Switched current to: $rel_path"
   exit 0
 fi
 
-# 4) No args: print current and then the “available” table
-current=$(awk 'NF{print; exit}' "$DIR_PATH/current" 2>/dev/null || echo "N/A")
+# List folders
 echo
-echo "current > $current"
+echo "current > ${current:-[root]}"
 echo "--------------------------"
 
-# default rows per column (override by exporting ROWS)
-: "${ROWS:=5}"
-num=${#folders[@]}
-cols=$(( (num + ROWS - 1) / ROWS ))
-
-# build “display” names and find max width
-declare -a displays
-maxlen=0
-for i in "${!folders[@]}"; do
-  displays[i]="${folders[i]} (${counts[i]})"
-  len=${#displays[i]}
-  (( len > maxlen )) && maxlen=$len
+declare -a foldernames counts
+for folder in "${folders[@]}"; do
+  name="${folder##*/}"
+  foldernames+=("$name")
+  counts+=( $(find "$folder" -type f -name '*.md' 2>/dev/null | wc -l | tr -d '[:space:]') )
 done
 
-# width of the largest index (e.g. “10” → 2)
-idxw=${#num}
+: "${ROWS:=5}"
+num=${#foldernames[@]}
+cols=$(( (num + ROWS - 1) / ROWS ))
 
-# total field width: “NN. ” + display + 2 spaces padding
+declare -a displays
+maxlen=0
+for i in "${!foldernames[@]}"; do
+  displays[i]="${foldernames[i]} (${counts[i]})"
+  (( ${#displays[i]} > maxlen )) && maxlen=${#displays[i]}
+done
+
+idxw=${#num}
 fieldw=$(( idxw + 2 + maxlen + 2 ))
 
-# print in ROWS‑high columns
 for (( r=0; r<ROWS; r++ )); do
   line=""
   for (( c=0; c<cols; c++ )); do
     i=$(( c*ROWS + r ))
     if (( i < num )); then
-      numstr=$(( i+1 ))
-      # pad each cell to fixed width
-      printf -v cell "%-${fieldw}s" "${numstr}. ${displays[i]}"
+      printf -v cell "%-${fieldw}s" "$((i+1)). ${displays[i]}"
       line+="$cell"
     fi
   done
   [[ -n "$line" ]] && echo "$line"
 done
 
-# 5) Show footer
 echo
 echo "--------------------------"
-printf "current > %s\n\n" "$current"
+printf "current > %s\n\n" "${current:-[root]}"
 
