@@ -27,13 +27,14 @@ Usage: nc [option] or [index]
 🔍 Navigation
   -pwd               Show current folder path
   -cd <subfolder>    Enter a subfolder (if it exists)
-  -up                Move up one folder (if not at root)
+  -up / ..           Move up one folder (if not at root)
   <number>           Set current folder to the listed index
 
 📁 Folder Ops
   -new <name>        Create a folder inside current
   -move <i> -to <j>  Move folder #i into folder #j
   -move <i> -to up   Move folder #i up one level
+  -rename <i> <new>  Rename folder #i to 'new'
 
 🧭 Display
   (no args)          List current folder contents
@@ -70,7 +71,11 @@ if [[ "$1" == "-cd" && -n "$2" ]]; then
   exit 0
 fi
 
-# Handle: -up
+# Handle: -up and ".."
+if [[ "$1" == ".." ]]; then
+  set -- "-up"
+fi
+
 if [[ "$1" == "-up" ]]; then
   if [[ -z "$current" ]]; then
     echo "Already at root." >&2
@@ -128,6 +133,34 @@ if [[ "$1" == "-move" && "$2" =~ ^[0-9]+$ && "$3" == "-to" ]]; then
     echo "Moved '$base' to '$(dirname "$dst")'"
   else
     echo "Move failed." >&2
+  fi
+  exit 0
+fi
+
+# 🆕 Handle: -rename <index> <new_name>
+if [[ "$1" == "-rename" && "$2" =~ ^[0-9]+$ && -n "$3" ]]; then
+  mapfile -t folders < <(find "$TARGET_PATH" -mindepth 1 -maxdepth 1 -type d | sort)
+  idx=$2
+  newname="$3"
+
+  if (( idx < 1 || idx > ${#folders[@]} )); then
+    echo "Invalid index: $idx" >&2
+    exit 1
+  fi
+
+  src="${folders[idx-1]}"
+  dst="$(dirname "$src")/$newname"
+
+  if [[ -e "$dst" ]]; then
+    echo "Destination folder already exists: $dst" >&2
+    exit 1
+  fi
+
+  if mv "$src" "$dst"; then
+    echo "Renamed '$(basename "$src")' → '$newname'"
+  else
+    echo "Failed to rename '$src'" >&2
+    exit 1
   fi
   exit 0
 fi

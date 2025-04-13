@@ -44,6 +44,13 @@ if [ ! -e "$FILE" ]; then
   cp "$DEFAULT_FILE" "$FILE"
 fi
 
+# ——— Exit if plugin has already taken over control —————————————————————
+if [[ "$NNOTE_EXIT_AFTER_PLUGIN" == "1" ]]; then
+  exit 0
+fi
+
+
 # ——— Open in your editor —————————————————————————————————————————————
+echo "Opening nvim"
 exec nvim "$FILE"
 

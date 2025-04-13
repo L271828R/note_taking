@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+
+cd "$NOTES_PATH" || { echo "❌ ERROR: NOTES_PATH not found: '$NOTES_PATH'"; exit 1; }
+
+# Stage everything
+git add .
+
+# Create timestamp
+datetime=$(date "+%Y-%m-%d %H:%M:%S")
+
+# Commit safely (quotes escaped properly)
+git commit -m "📥 Save notes: $datetime"
+
+# Optional push
+# git push
+
+echo "✅ Notes saved to Git at $datetime"
+
+
+# git log --name-only
+
