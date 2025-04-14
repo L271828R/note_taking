@@ -7,6 +7,8 @@
 # 3) Write to $NOTES_RESULTS_FILE
 # 4) Invoke plugins
 # 5) Support -delete
+# 6) Support -rename
+# 7) Support -h|--help
 
 # resolve script dir (for finding nlist_plugins/)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}" )" && pwd)"
@@ -15,6 +17,43 @@ NOTE_DIR="$NOTES_FOLDERS_PATH"
 CURRENT_FILE="$NOTES_CURRENT_FILE"
 RESULTS_FILE="$NOTES_RESULTS_FILE"
 PLUGIN_DIR="$SCRIPT_DIR/nlist_plugins"
+
+### ─────────────────────────────────────────────────────────────────────────────
+### Help
+### ─────────────────────────────────────────────────────────────────────────────
+if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+  cat <<EOF
+
+Usage: nlist.sh [options]
+
+Options:
+  -h, --help           Show this help message and exit
+  -delete <num>        Move the Nth Markdown file in the current folder
+                       to /tmp/notes/delete (instead of listing)
+  -rename <num> <name> Rename the Nth Markdown file to <name> (will append
+                       .md if you omit it)
+
+What it does:
+  • Lists all .md files in the current notes folder (with timestamp & Title)
+  • Lists all subfolders (with .md‑file counts)
+  • Writes the full listing to \$NOTES_RESULTS_FILE
+  • Runs any executable plugins in nlist_plugins/
+  • Prints the listing to stdout
+
+Environment:
+  NOTES_FOLDERS_PATH   Directory where your notes subfolders live
+  NOTES_CURRENT_FILE   File containing your “current” folder name
+  NOTES_RESULTS_FILE   Where the listing is written
+
+Examples:
+  nlist.sh
+  nlist.sh -delete 3
+  nlist.sh -rename 2 meeting_notes
+  nlist.sh --help
+
+EOF
+  exit 0
+fi
 
 # 1) ensure NOTE_DIR exists
 if [[ ! -d "$NOTE_DIR" ]]; then
@@ -49,7 +88,7 @@ if [[ "$1" == "-delete" && "$2" =~ ^[0-9]+$ ]]; then
     echo "Error: Invalid file number '$idx'." >&2
     exit 1
   fi
-  IFS='|' read -r epoch filename <<< "${file_list[idx-1]}"
+  IFS='|' read -r _ filename <<< "${file_list[idx-1]}"
   src="$TARGET/$filename"
   if [[ ! -f "$src" ]]; then
     echo "Error: File '$src' not found." >&2
@@ -62,12 +101,39 @@ if [[ "$1" == "-delete" && "$2" =~ ^[0-9]+$ ]]; then
   exit 0
 fi
 
-# 5) Gather subfolders and .md file counts
+# 5) If -rename is passed
+if [[ "$1" == "-rename" && "$2" =~ ^[0-9]+$ && -n "$3" ]]; then
+  idx=$2
+  newname="$3"
+  # ensure .md extension
+  [[ "$newname" != *.md ]] && newname="${newname}.md"
+  if (( idx < 1 || idx > ${#file_list[@]} )); then
+    echo "Error: Invalid file number '$idx'." >&2
+    exit 1
+  fi
+  IFS='|' read -r _ oldname <<< "${file_list[idx-1]}"
+  src="$TARGET/$oldname"
+  dst="$TARGET/$newname"
+  if [[ ! -f "$src" ]]; then
+    echo "Error: File '$src' not found." >&2
+    exit 1
+  fi
+  if [[ -e "$dst" ]]; then
+    echo "Error: Destination '$newname' already exists." >&2
+    exit 1
+  fi
+  mv "$src" "$dst" && \
+    echo "Renamed '$oldname' → '$newname'." || \
+    { echo "Error: Rename failed." >&2; exit 1; }
+  exit 0
+fi
+
+# 6) Gather subfolders and .md file counts
 mapfile -t folder_list < <(
   find "$TARGET" -mindepth 1 -maxdepth 1 -type d | sort
 )
 
-# 6) Write listing
+# 7) Write listing
 GREEN='\033[0;32m'
 BLUE='\033[1;34m'
 RESET='\033[0m'
@@ -96,7 +162,7 @@ RESET='\033[0m'
   done
 } > "$RESULTS_FILE"
 
-# 7) Run plugins
+# 8) Run plugins
 if [[ -d "$PLUGIN_DIR" ]]; then
   for plugin in "$PLUGIN_DIR"/*.sh; do
     [[ -x "$plugin" ]] || continue
@@ -104,7 +170,7 @@ if [[ -d "$PLUGIN_DIR" ]]; then
   done
 fi
 
-# 8) Print
+# 9) Print
 echo ""
 echo "current > $current"
 echo "---------------------------------------------------------------------------------"

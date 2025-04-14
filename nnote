@@ -42,13 +42,25 @@ FILE="$NOTE_DIR/$current/$1"
 if [ ! -e "$FILE" ]; then
   mkdir -p "$(dirname "$FILE")"
   cp "$DEFAULT_FILE" "$FILE"
+
+  # ——— inject a new 8‑hex ID if missing —————————————————————————————
+  if ! grep -q '^<!-- id:' "$FILE"; then
+    # generate 4 random bytes, hex‑encoded (8 chars)
+    id=$(xxd -l4 -p /dev/urandom)
+    # prepend the ID line at the top of the file
+    if [[ "$(uname)" == "Darwin" ]]; then
+      sed -i '' -e "1s;^;<!-- id: $id -->\n;" "$FILE"
+    else
+      sed -i -e "1s;^;<!-- id: $id -->\n;" "$FILE"
+    fi
+  fi
+  # —————————————————————————————————————————————————————————————————————————
 fi
 
 # ——— Exit if plugin has already taken over control —————————————————————
 if [[ "$NNOTE_EXIT_AFTER_PLUGIN" == "1" ]]; then
   exit 0
 fi
-
 
 # ——— Open in your editor —————————————————————————————————————————————
 echo "Opening nvim"

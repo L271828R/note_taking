@@ -75,6 +75,19 @@ update_map_for_dir() {
 # Commands
 # ─────────────────────────────────────────────────────────────────────────────
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Reset to root
+# ─────────────────────────────────────────────────────────────────────────────
+if [[ "$1" == "root" ]]; then
+  # clear current folder
+  echo "" > "$CURRENT_FILE"
+  write_log "Reset current → [root]"
+  echo "Moved to: [root]"
+  exit 0
+fi
+
+
+
 if [[ "$1" == "-help" ]]; then
   cat <<EOF
 
