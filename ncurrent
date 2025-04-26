@@ -93,26 +93,31 @@ if [[ "$1" == "-help" ]]; then
 
 📝 ncurrent — Current Folder Manager
 ------------------------------------
-Usage: nc [option] or [index]
+Usage: ncurrent [option] or [index]
 
 🔍 Navigation
-  -pwd               Show current folder path
-  -cd <subfolder>    Enter a subfolder
-  -up / ..           Move up one folder
-  <number>           Set current by index
+  -pwd                Show current folder path.
+  -cd <subfolder>     Enter a subfolder by name.
+  -up / ..            Move up one folder level.
+  <number>            Set current folder by selecting from list (by index).
 
-📁 Folder Ops
-  -new <name>        Create a folder
-  -move <i> -to <j>  Move folder #i → folder #j
-  -move <i> -to up   Move folder #i up one level
-  -rename <i> <new>  Rename folder #i
+📁 Folder Operations
+  -new <name>         Create a new subfolder under current.
+  -move <i> -to <j>   Move folder #i into folder #j.
+  -move <i> -to up    Move folder #i up one level.
+  -rename <i> <name>  Rename folder #i to a new name.
 
 🧭 Display
-  (no args)          List contents
-  ROWS=<n> nc        Override rows per column
+  (no arguments)      List folders and subfolder note counts.
+  ROWS=<n> ncurrent    Set rows per column for list display.
 
 🆘 Help
-  -help              Show this message
+  -help               Show this help message.
+
+Notes:
+  • Moves and renames automatically update your .note_map.json file.
+  • All changes are logged to .note_map.log for debugging.
+  • The "current" folder determines the target for most other scripts.
 
 EOF
   write_log "Displayed help"
@@ -257,6 +262,6 @@ for ((r=0; r<ROWS; r++)); do
 done
 
 echo
-echo "--------------------------"
-printf "current > %s\n\n" "${current:-[root]}"
+#echo "--------------------------"
+#printf "current > %s\n\n" "${current:-[root]}"
 

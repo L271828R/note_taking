@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Root of your vault
+NOTES_DIR="${NOTES_FOLDERS_PATH:-$HOME/projects/notes/folders}"
+# Path to your map file
+MAP_FILE="${NOTES_PATH:-$HOME/projects/notes}/.note_map.json"
+
+# Launch fzf over all notes (relative paths)
+selected="$(find "$NOTES_DIR" -type f -name '*.md' \
+  | sed "s|^$NOTES_DIR/||" \
+  | fzf --prompt="Notes> " --height=40% --border )"
+
+# If the user picked something, open it and then stamp last_visited
+if [[ -n "$selected" ]]; then
+  nvim "$NOTES_DIR/$selected"
+
+  # only attempt JSON‐update if the map exists
+  if [[ -f "$MAP_FILE" ]]; then
+    # find the ID whose .path ends with this relative path
+    note_id="$(jq -r --arg suffix "$selected" '
+      to_entries
+      | map(select(.value.path | endswith($suffix)))
+      | .[0].key // empty
+    ' "$MAP_FILE")"
+
+    if [[ -n "$note_id" ]]; then
+      # ISO‑8601 UTC timestamp
+      ts="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+      tmpfile="$(mktemp)"
+      jq --arg id "$note_id" --arg t "$ts" '
+        .[$id].last_visited = $t
+      ' "$MAP_FILE" > "$tmpfile"
+      mv "$tmpfile" "$MAP_FILE"
+    fi
+  fi
+fi
+

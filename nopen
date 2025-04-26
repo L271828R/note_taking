@@ -1,39 +1,68 @@
-#!/bin/bash
+#!/usr/bin/env bash
+#
+# nnote_open.sh — Open a note by its list number **and** stamp last_visited in .note_map.json
 
-NOTE_DIR="$NOTES_FOLDERS_PATH"
-CURRENT_FILE="$NOTES_CURRENT_FILE"
-RESULTS_FILE="$NOTES_RESULTS_FILE"
-current=$(awk 'NF{print; exit}' "$CURRENT_FILE")
+set -euo pipefail
 
-#if [ -z "$1" ]; then
-    #echo "Usage: $0 <number>"
-    #exit 1
-    #1="1"
-#fi
+# ——— Configuration ———
+NOTE_DIR="${NOTES_FOLDERS_PATH:-$HOME/projects/notes/folders}"
+CURRENT_FILE="${NOTES_CURRENT_FILE:-$HOME/projects/notes/current}"
+RESULTS_FILE="${NOTES_RESULTS_FILE:-$HOME/projects/notes/results.txt}"
+MAP_FILE="${NOTES_PATH:-$HOME/projects/notes}/.note_map.json"
 
-# Check if the results file exists in the NOTE_DIR.
-if [ ! -f "$RESULTS_FILE" ]; then
-    echo "Error: ${RESULTS_FILE} not found. Please ensure you have generated it."
-    exit 1
+# ——— Helpers ———
+error() {
+  echo "Error: $*" >&2
+  exit 1
+}
+
+# ——— 1. Determine current folder ———
+[[ -f "$CURRENT_FILE" ]] || error "Current-file pointer not found at $CURRENT_FILE"
+current="$(awk 'NF{print; exit}' "$CURRENT_FILE")"
+[[ -n "$current" ]] || error "Could not read current folder from $CURRENT_FILE"
+
+# ——— 2. Ensure results.txt exists ———
+[[ -f "$RESULTS_FILE" ]] || error "Results file not found: $RESULTS_FILE (run nlist first)"
+
+# ——— 3. Pick an entry number ———
+arg="${1:-1}"
+[[ "$arg" =~ ^[0-9]+$ ]] || error "Invalid entry number: '$arg'"
+
+# ——— 4. Find corresponding filename ———
+filename="$(awk -v num="$arg" '$1==num{print $2; exit}' "$RESULTS_FILE")"
+[[ -n "$filename" ]] || error "No file #$arg in $RESULTS_FILE"
+
+# ——— 5. Verify file exists ———
+fullpath="$NOTE_DIR/$current/$filename"
+[[ -f "$fullpath" ]] || error "Note not found: $fullpath"
+
+# ——— 6. Open in Neovim ———
+nvim "$fullpath"
+
+# ——— 7. After quitting Neovim, update last_visited in .note_map.json ———
+if [[ ! -f "$MAP_FILE" ]]; then
+  echo "Warning: Map file not found at $MAP_FILE; skipping last_visited update" >&2
+  exit 0
 fi
 
-arg=${1:-1}
-#echo "arg=$arg"
+# Compute the suffix we want to match against the stored .path
+relpath="$current/$filename"
 
-# Extract the filename corresponding to the provided number from results.txt
-filename=$(awk -v num="$arg" '$1 == num {print $2}' "$RESULTS_FILE")
+# Look for any .path that ends with this suffix
+note_id="$(jq -r --arg suffix "$relpath" '
+  to_entries
+  | map(select(.value.path | endswith($suffix)))
+  | .[0].key // empty
+' "$MAP_FILE")"
 
-if [ -z "$filename" ]; then
-    echo "No file found for number $1 in ${RESULTS_FILE}"
-    exit 1
+if [[ -n "$note_id" ]]; then
+  ts="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+  tmpfile="$(mktemp)"
+  jq --arg id "$note_id" --arg t "$ts" '
+    .[$id].last_visited = $t
+  ' "$MAP_FILE" > "$tmpfile"
+  mv "$tmpfile" "$MAP_FILE"
+else
+  echo "Warning: No map entry matching '*::$relpath'; skipping last_visited" >&2
 fi
-
-# Check if the file exists in NOTE_DIR before opening it.
-if [ ! -f "${NOTE_DIR}/$current/${filename}" ]; then
-    echo "Error: File ${NOTE_DIR}/$current/${filename} does not exist."
-    exit 1
-fi
-
-# Open the file in nvim from the desired directory.
-nvim "${NOTE_DIR}/$current/${filename}"
 

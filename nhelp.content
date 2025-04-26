@@ -1,19 +1,62 @@
+  ngrep (uses ripgrep internally)
+    ngrep <string> 
+        Search notes for a string inside the folder that 'current' points to.
 
+  nlist (list and manage notes)
+    nlist
+        List all Markdown notes under the current folder.
+    nlist -delete <num>
+        Move the selected note to /tmp/notes/delete.
+    nlist -rename <num> <new_name>
+        Rename a note. Appends '.md' automatically if omitted.
+    nlist -rename <num> -style date
+        Prepend today's date (YYYY-MM-DD-) to the filename.
+    nlist -move <num> <folder>
+        Move a note into a subfolder. Supports full or partial folder name matches.
+        Use ".." to move up one directory.
 
-  ngrep ( uses ripgrep )
-	ngrep <string to search> , to search in what ever folder current
-	is pointing to.
-  nlist ( shows current notes )
-	nlist , to list all notes current is pointing to
-	nlist -delete <number> , to delete note
-  nnote ( ceates new note, pass filename.md )
-  nresults ( prints results.txt file with file index and name )
-  nopen ( based on nresults it takes an index and opens file ) 
-	nopen , to open the first in the list in results.txt
-  nsearch ( searches with ngrep and saves file names to results.txt )
-	nsearch < string to search > to get names of notes with your
-	search results
-  ncurrent ( shows folders and current and allows you to set current )
-	ncurrent -new <folder> , to create a new folder
+  nnote (create a new note)
+    nnote <filename.md>
+        Create a new Markdown file in the current folder.
+
+  nresults (show search results)
+    nresults
+        Print the saved results.txt file (file index + names from last search).
+
+  nopen (open a note by index)
+    nopen
+        Open the first file in results.txt.
+    nopen <index>
+        Open the file at the specified index from results.txt.
+
+  nsearch (search notes and save results)
+    nsearch <string>
+        Search notes for a string, save matching filenames to results.txt.
+
+  ncurrent (manage and navigate folders)
+    ncurrent
+        List subfolders and show the currently selected folder.
+    ncurrent <index>
+        Set the current folder by selecting its index.
+    ncurrent -pwd
+        Show the full path of the current folder.
+    ncurrent -cd <subfolder>
+        Change into a subfolder by name.
+    ncurrent -up / ..
+        Move up one folder level.
+    ncurrent -new <folder>
+        Create a new subfolder inside the current folder.
+    ncurrent -move <i> -to <j>
+        Move folder #i into folder #j.
+    ncurrent -move <i> -to up
+        Move folder #i up one level.
+    ncurrent -rename <i> <new_name>
+        Rename folder #i.
+    ncurrent -help
+        Show help information.
+
+  nfzf (fuzzy find folders)
+    nfzf
+        Search subfolders using fzf and open a file in Neovim.
 
 

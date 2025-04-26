@@ -31,6 +31,12 @@ if [ -z "$1" ] && [[ "$current" == *journal* ]]; then
   set -- "$(date +%F).md"
 fi
 
+# ——— Check if in "ideas" folder for Zettelkasten mode (if folder contains "ideas") ———
+if [[ "$current" == *ideas* ]]; then
+  # Zettelkasten Mode: Random suffix for today's date
+  set -- "$(date +%F)-$(xxd -l3 -p /dev/urandom).md"
+fi
+
 # ——— Require a filename argument ——————————————————————————————————————
 if [ -z "$1" ]; then
   echo "Usage: $(basename "$0") <filename>"
@@ -43,7 +49,7 @@ if [ ! -e "$FILE" ]; then
   mkdir -p "$(dirname "$FILE")"
   cp "$DEFAULT_FILE" "$FILE"
 
-  # ——— inject a new 8‑hex ID if missing —————————————————————————————
+  # ——— Inject a new 8‑hex ID if missing —————————————————————————————
   if ! grep -q '^<!-- id:' "$FILE"; then
     # generate 4 random bytes, hex‑encoded (8 chars)
     id=$(xxd -l4 -p /dev/urandom)

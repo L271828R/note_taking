@@ -1,2 +1,2 @@
 #!/usr/bin/env bash
-cat "$NOTES_PATH"/bin/nhelp.content
+cat "$NOTES_PATH"/bin_/nhelp.content
