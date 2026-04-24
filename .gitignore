@@ -1,0 +1,12 @@
+python_scripts/venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Runtime state
+results.txt
+previous
+.note_map.log
+.claude/

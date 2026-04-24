@@ -1,0 +1,65 @@
+2025-05-04 01:50:20  === clean_and_reseed_ids.py start ===
+2025-05-04 01:50:20  vault = /Users/luisrueda/projects/notes
+2025-05-04 01:50:20  dry_run=True, backups=True
+2025-05-04 01:50:20  Scanning 75 markdown files
+2025-05-04 01:50:20  Trimmed extra id lines in folders/ideas/2025-04-17-0d7fa0.md
+2025-05-04 01:50:20  Per-file cleanup done; 1 files trimmed
+2025-05-04 01:50:20  No global duplicate IDs found.
+2025-05-04 01:50:20  === finished ===
+2025-05-04 01:50:48  === clean_and_reseed_ids.py start ===
+2025-05-04 01:50:48  vault = /Users/luisrueda/projects/notes
+2025-05-04 01:50:48  dry_run=False, backups=True
+2025-05-04 01:50:48  Scanning 75 markdown files
+2025-05-04 01:50:48  Trimmed extra id lines in folders/ideas/2025-04-17-0d7fa0.md
+2025-05-04 01:50:48  Per-file cleanup done; 1 files trimmed
+2025-05-04 01:50:48  No global duplicate IDs found.
+2025-05-04 01:50:48  === finished ===
+2025-05-04 02:23:54  === clean_and_reseed_ids.py start ===
+2025-05-04 02:23:54  vault = /Users/luisrueda/projects/notes
+2025-05-04 02:23:54  dry_run=False, backups=True
+2025-05-04 02:23:54  Scanning 75 markdown files
+2025-05-04 02:23:54  Per-file cleanup done; 0 files trimmed
+2025-05-04 02:23:54  No global duplicate IDs found.
+2025-05-04 02:23:54  === finished ===
+2026-03-21 22:35:15  === clean_and_reseed_ids.py start ===
+2026-03-21 22:35:15  vault = /Users/luisrueda/projects/notes
+2026-03-21 22:35:15  dry_run=False, backups=True
+2026-03-21 22:35:15  Scanning 91 markdown files
+2026-03-21 22:35:15  Per-file cleanup done; 0 files trimmed
+2026-03-21 22:35:15  Global duplicates: 1 IDs have multiple files
+2026-03-21 22:35:15  Re-seeded folders/ideas/2025-05-03-c86ed2.md  cb511a84 → d4b0ba51
+2026-03-21 22:35:15  Re-seeded folders/ideas/2025-05-18-5244fe.md  cb511a84 → 3a55c792
+2026-03-21 22:35:15  Re-seeded folders/ideas/2025-05-18-f5e2ca.md  cb511a84 → 8a5b6bdd
+2026-03-21 22:35:15  Re-seeded folders/ideas/2025-05-31-4bdd13.md  cb511a84 → c315423c
+2026-03-21 22:35:15  Re-seeded folders/ideas/2025-05-10-e243d5.md  cb511a84 → 111b3f98
+2026-03-21 22:35:15  Re-seeded folders/ideas/2025-05-10-b60d1e.md  cb511a84 → f6facf3c
+2026-03-21 22:35:15  Re-seeded folders/ideas/2025-06-07-a3b549.md  cb511a84 → 3995dafa
+2026-03-21 22:35:15  Re-seeded folders/book ideas/c programming language - K&R/ideas/2025-05-04-812129.md  cb511a84 → 39a64ea0
+2026-03-21 22:35:15  Re-seeded folders/book ideas/c programming language - K&R/ideas/2025-05-04-705392.md  cb511a84 → d55d2ef4
+2026-03-21 22:35:15  Re-seeded folders/5_journals/trading_journal/when-to-sell-a-hot-option.md  cb511a84 → e26cd1ca
+2026-03-21 22:35:15  Re-seeded folders/5_journals/trading_journal/2025-05-05.md  cb511a84 → d1aa6195
+2026-03-21 22:35:15  Re-seeded folders/5_journals/trading_journal/sudden-drops-bites/2025-05-10.md  cb511a84 → 2236d327
+2026-03-21 22:35:15  Re-seeded folders/5_journals/trading_journal/sudden-drops-bites/drops-and-gas.md  cb511a84 → 21f4d6df
+2026-03-21 22:35:15  Re-seeded folders/5_journals/trading_journal/selling-vertical-options/2025-11-22.md  cb511a84 → 4df733d0
+2026-03-21 22:35:15  Re-seeded folders/1_projects/work-history/trade-web.md  cb511a84 → 9ceb4554
+2026-03-21 22:35:15  Re-seeded folders/1_projects/my_companies/ein_tax_number.md  cb511a84 → ae2f2660
+2026-03-21 22:35:15  Re-seeded folders/1_projects/roomchat/eating_dog_food.md  cb511a84 → 2617e0ab
+2026-03-21 22:35:15  Re-seeded folders/3_resources/QA_Career/ISQB/levels-of-testing.md  cb511a84 → 340b1aff
+2026-03-21 22:35:15  Re-seeded folders/3_resources/QA_Career/ISQB/test-types.md  cb511a84 → da8da8db
+2026-03-21 22:35:15  Re-seeded folders/3_resources/QA_Career/ISQB/qa-objectives.md  cb511a84 → 24dce9c6
+2026-03-21 22:35:15  Re-seeded folders/3_resources/QA_Career/ISQB/test-objectives.md  cb511a84 → 06b75e6d
+2026-03-21 22:35:15  Re-seeded folders/3_resources/todo/contacts/family/gladys.cuellar.md  cb511a84 → 883dd9bb
+2026-03-21 22:35:15  Re-seeded folders/3_resources/todo/contacts/family/german.cuellar.md  cb511a84 → adfca19a
+2026-03-21 22:35:15  ✅ Reseeded 23 files   report: /Users/luisrueda/projects/notes/duplicate_id_changes.json
+2026-03-21 22:35:15  === finished ===
+2026-03-22 00:16:57  === clean_and_reseed_ids.py start ===
+2026-03-22 00:16:57  vault = /Users/luisrueda/projects/notes
+2026-03-22 00:16:57  dry_run=False, backups=True
+2026-03-22 00:16:57  Scanning 94 markdown files
+2026-03-22 00:16:57  Per-file cleanup done; 0 files trimmed
+2026-03-22 00:16:57  Global duplicates: 1 IDs have multiple files
+2026-03-22 00:16:57  Re-seeded folders/3_resources/QA_Career/ISQB/test-implementation.md  cb511a84 → 725bd0e6
+2026-03-22 00:16:57  Re-seeded folders/3_resources/QA_Career/ISQB/test-design.md  cb511a84 → 0463c9f2
+2026-03-22 00:16:57  Re-seeded folders/3_resources/QA_Career/ISQB/test.md  cb511a84 → 2c6122b6
+2026-03-22 00:16:57  ✅ Reseeded 3 files   report: /Users/luisrueda/projects/notes/duplicate_id_changes.json
+2026-03-22 00:16:57  === finished ===

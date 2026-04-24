@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+#
+# bin/nnote: Create or open a note, with plugin hooks and auto‑journal support.
+
+# ——— Configurable paths —————————————————————————————————————————————————
+NOTE_DIR="$NOTES_FOLDERS_PATH"          # e.g. /Users/luisrueda/projects/notes
+CURRENT_FILE="$NOTES_CURRENT_FILE"      # e.g. /Users/luisrueda/projects/notes/current
+DEFAULT_FILE="$NOTES_PATH/templates/default.md"
+# —————————————————————————————————————————————————————————————————————————
+
+# ——— Plugin hook: run each executable in nnote_plugins —————————————————
+PLUGIN_DIR="$(dirname "$0")/nnote_plugins"
+if [ -d "$PLUGIN_DIR" ]; then
+  for plugin in "$PLUGIN_DIR"/*; do
+    if [ -f "$plugin" ] && [ -x "$plugin" ]; then
+      "$plugin" "$@"      # call plugin with same args
+    fi
+  done
+fi
+# —————————————————————————————————————————————————————————————————————————
+
+# ——— Figure out which folder is “current” —————————————————————————————
+if [ ! -f "$CURRENT_FILE" ]; then
+  echo "ERROR: cannot read current file pointer: $CURRENT_FILE" >&2
+  exit 1
+fi
+current=$(awk 'NF{print; exit}' "$CURRENT_FILE")
+
+# ——— Auto‑journal: if no filename AND we’re in a journal folder, default to today ——
+if [ -z "$1" ] && [[ "$current" == *journal* ]]; then
+  set -- "$(date +%F).md"
+fi
+
+# ——— Check if in "ideas" folder for Zettelkasten mode (if folder contains "ideas") ———
+if [[ "$current" == *ideas* ]]; then
+  # Zettelkasten Mode: Random suffix for today's date
+  set -- "$(date +%F)-$(xxd -l3 -p /dev/urandom).md"
+fi
+
+# ——— Require a filename argument ——————————————————————————————————————
+if [ -z "$1" ]; then
+  echo "Usage: $(basename "$0") <filename>"
+  exit 1
+fi
+
+# ——— Build full path and create if needed —————————————————————————————
+FILE="$NOTE_DIR/$current/$1"
+if [ ! -e "$FILE" ]; then
+  mkdir -p "$(dirname "$FILE")"
+  cp "$DEFAULT_FILE" "$FILE"
+
+  # ——— Inject a new 8‑hex ID if missing —————————————————————————————
+  if ! grep -q '^<!-- id:' "$FILE"; then
+    # generate 4 random bytes, hex‑encoded (8 chars)
+    id=$(xxd -l4 -p /dev/urandom)
+    # prepend the ID line at the top of the file
+    if [[ "$(uname)" == "Darwin" ]]; then
+      sed -i '' -e "1s;^;<!-- id: $id -->\n;" "$FILE"
+    else
+      sed -i -e "1s;^;<!-- id: $id -->\n;" "$FILE"
+    fi
+  fi
+  # —————————————————————————————————————————————————————————————————————————
+fi
+
+# ——— Exit if plugin has already taken over control —————————————————————
+if [[ "$NNOTE_EXIT_AFTER_PLUGIN" == "1" ]]; then
+  exit 0
+fi
+
+# ——— Open in your editor —————————————————————————————————————————————
+echo "Opening nvim"
+exec nvim "$FILE"
+

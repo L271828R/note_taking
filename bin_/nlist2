@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# nlist2 - Interactive selector using 'curses' (built-in, no dependencies)
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+VENV_PYTHON="$PROJECT_DIR/python_scripts/venv/bin/python3"
+SCRIPT="$PROJECT_DIR/python_scripts/nlist2.py"
+
+if [ ! -f "$VENV_PYTHON" ]; then
+    echo "Error: Run python_scripts/setup_venv.sh first" >&2
+    exit 1
+fi
+
+exec "$VENV_PYTHON" "$SCRIPT" "$@"

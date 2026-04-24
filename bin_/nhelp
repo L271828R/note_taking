@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+nvim "$NOTES_PATH"/bin_/nhelp.content

@@ -1,0 +1,24 @@
+#!/bin/bash
+
+NOTE_DIR="$NOTES_FOLDERS_PATH"
+CURRENT_FILE="$NOTES_CURRENT_FILE"
+RESULTS_FILE="$NOTES_RESULTS_FILE"
+current=$(awk 'NF{print; exit}' "$CURRENT_FILE")
+
+
+# Change to the desired directory.
+cd "$NOTE_DIR/$current" || { echo "Failed to change directory to $NOTE_DIR"; exit 1; }
+
+# Check if a search pattern was provided.
+if [ -z "$1" ]; then
+  echo "Usage: $0 <search_pattern>"
+  exit 1
+fi
+
+# Search for the pattern (case-insensitive) in all Markdown files,
+# number the filenames, and save the output to results.txt.
+grep -i -l "$1" *.md | nl -s'. ' > "$RESULTS_FILE"
+
+# Display the contents of results.txt.
+cat "$RESULTS_FILE"
+

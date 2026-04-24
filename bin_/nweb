@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# nweb - Start the note graph web server using venv Python
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+VENV_PYTHON="$PROJECT_DIR/python_scripts/venv/bin/python3"
+SERVER_SCRIPT="$PROJECT_DIR/note_graph_server.py"
+PORT=8080
+
+# Check if venv exists
+if [ ! -f "$VENV_PYTHON" ]; then
+    echo "Error: Virtual environment not found at $VENV_PYTHON" >&2
+    echo "Run: cd $PROJECT_DIR/python_scripts && ./setup_venv.sh" >&2
+    exit 1
+fi
+
+# Check if server script exists
+if [ ! -f "$SERVER_SCRIPT" ]; then
+    echo "Error: Server script not found at $SERVER_SCRIPT" >&2
+    exit 1
+fi
+
+# Check if port is already in use
+if lsof -Pi :$PORT -sTCP:LISTEN -t >/dev/null 2>&1 ; then
+    echo "Error: Port $PORT is already in use" >&2
+    echo "" >&2
+    echo "To kill the existing process:" >&2
+    PID=$(lsof -ti:$PORT)
+    echo "  kill $PID" >&2
+    echo "" >&2
+    echo "Or to find what's using it:" >&2
+    echo "  lsof -i :$PORT" >&2
+    exit 1
+fi
+
+echo "Starting Note Graph Web Server..."
+echo "Python: $VENV_PYTHON"
+echo "Script: $SERVER_SCRIPT"
+echo ""
+
+# Run the server
+exec "$VENV_PYTHON" "$SERVER_SCRIPT" "$@"

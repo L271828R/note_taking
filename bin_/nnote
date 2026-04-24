@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+#
+# bin/nnote: Wrapper to call Python nnote with venv
+#
+# This wrapper maintains backwards compatibility while delegating
+# to the Python implementation which adds .md extension by default.
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+PYTHON_SCRIPTS_DIR="$PROJECT_DIR/python_scripts"
+VENV_PYTHON="$PYTHON_SCRIPTS_DIR/venv/bin/python3"
+NNOTE_SCRIPT="$PYTHON_SCRIPTS_DIR/nnote.py"
+
+# Check if venv exists
+if [ ! -f "$VENV_PYTHON" ]; then
+    echo "ERROR: Python virtual environment not found at $VENV_PYTHON" >&2
+    echo "Run: cd $PYTHON_SCRIPTS_DIR && ./setup_venv.sh" >&2
+    exit 1
+fi
+
+# Check if nnote.py exists
+if [ ! -f "$NNOTE_SCRIPT" ]; then
+    echo "ERROR: nnote.py not found at $NNOTE_SCRIPT" >&2
+    exit 1
+fi
+
+# Execute Python version with all arguments
+exec "$VENV_PYTHON" "$NNOTE_SCRIPT" "$@"

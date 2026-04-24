@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# nrandom - Open a random note with substantial content
+
+FOLDERS_PATH="${NOTES_FOLDERS_PATH:-$HOME/projects/notes/folders}"
+MIN_LINES=10  # Minimum number of lines to consider "substantial"
+
+# Find all .md files under folders path
+mapfile -t all_notes < <(find "$FOLDERS_PATH" -type f -name '*.md' 2>/dev/null)
+
+if [[ ${#all_notes[@]} -eq 0 ]]; then
+  echo "No notes found in $FOLDERS_PATH" >&2
+  exit 1
+fi
+
+# Filter notes with substantial content
+substantial_notes=()
+for note in "${all_notes[@]}"; do
+  line_count=$(wc -l < "$note" 2>/dev/null | tr -d '[:space:]')
+  if [[ $line_count -ge $MIN_LINES ]]; then
+    substantial_notes+=("$note")
+  fi
+done
+
+if [[ ${#substantial_notes[@]} -eq 0 ]]; then
+  echo "No notes with substantial content (>= $MIN_LINES lines) found." >&2
+  exit 1
+fi
+
+# Pick a random note
+random_index=$((RANDOM % ${#substantial_notes[@]}))
+selected_note="${substantial_notes[$random_index]}"
+
+# Show which note we're opening
+relative_path="${selected_note#$FOLDERS_PATH/}"
+echo "Opening: $relative_path"
+
+# Open in nvim
+nvim "$selected_note"

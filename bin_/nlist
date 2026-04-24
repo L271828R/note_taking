@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+#
+# nlist-py - Wrapper to call Python nlist with venv
+# This script automatically uses the venv Python without needing to activate
+#
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+PYTHON_SCRIPTS_DIR="$PROJECT_DIR/python_scripts"
+VENV_PYTHON="$PYTHON_SCRIPTS_DIR/venv/bin/python3"
+NLIST_SCRIPT="$PYTHON_SCRIPTS_DIR/nlist.py"
+
+# Check if venv exists
+if [ ! -f "$VENV_PYTHON" ]; then
+    echo "Error: Virtual environment not found." >&2
+    echo "Please run: $PYTHON_SCRIPTS_DIR/setup_venv.sh" >&2
+    exit 1
+fi
+
+# Check if nlist.py exists
+if [ ! -f "$NLIST_SCRIPT" ]; then
+    echo "Error: nlist.py not found at $NLIST_SCRIPT" >&2
+    exit 1
+fi
+
+# Run the Python script with all arguments passed through
+exec "$VENV_PYTHON" "$NLIST_SCRIPT" "$@"

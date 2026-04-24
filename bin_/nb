@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# nb - note back (move up one folder level)
+exec ncurrent -up

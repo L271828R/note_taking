@@ -1,0 +1,282 @@
+  ngrep (uses ripgrep internally)
+    ngrep <string> 
+        Search notes for a string inside the folder that 'current' points to.
+
+  nlist (list and manage notes) [Python version]
+    nlist
+        List all Markdown notes in the current folder with:
+        • File numbers (for easy reference)
+        • Modification timestamps (YYYY-MM-DD HH:MM:SS)
+        • Note titles (extracted from "# Title:" line if present)
+        • Subfolder list with file counts
+        Output is saved to $NOTES_RESULTS_FILE and displayed.
+
+    nlist -delete <num>
+        Move the Nth note to /tmp/notes/delete (soft delete).
+        Example: nlist -delete 3
+        Note: Files are not permanently deleted, can be recovered from /tmp/notes/delete
+
+    nlist -rename <num> <new_name>
+        Rename the Nth note to <new_name>.
+        The .md extension is added automatically if omitted.
+        Example: nlist -rename 2 meeting-notes
+                 → Renames note #2 to "meeting-notes.md"
+
+    nlist -rename <num> -style date
+        Prepend today's date (YYYY-MM-DD-) to the Nth note's filename.
+        If the note already has a date prefix, it will be replaced with today's date.
+        Example: nlist -rename 1 -style date
+                 → "my-note.md" becomes "2025-11-22-my-note.md"
+                 → "2025-01-01-old.md" becomes "2025-11-22-old.md"
+
+    nlist -move <num> <folder>
+        Move the Nth note into a subfolder.
+        • Supports full folder names: nlist -move 5 archive
+        • Supports partial matching: nlist -move 5 arc (matches "archive")
+        • Use ".." to move to parent directory: nlist -move 2 ..
+        Example: nlist -move 3 research
+                 → Moves note #3 into the "research" subfolder
+
+    nlist -tags
+        List all tags found in notes with file counts.
+        Example output:
+          #food                          (12 files)
+          #recipe                        (8 files)
+          #work                          (25 files)
+
+    nlist -tag <tags>
+        Filter notes by tags (comma-separated for OR logic).
+        Example: nlist -tag food        → Show notes with #food
+                 nlist -tag food,recipe → Show notes with #food OR #recipe
+
+    nlist --help
+        Show detailed help and usage examples.
+
+    Tips:
+    • Run 'nlist' first to see numbered list, then use the number
+    • Numbers change after operations, so re-run nlist to get updated numbers
+    • The bash version is still available as 'nlist-bash' if needed
+
+  nnote (create a new note)
+    nnote <filename.md>
+        Create a new Markdown file in the current folder.
+
+  nresults (show search results)
+    nresults
+        Print the saved results.txt file (file index + names from last search).
+
+  nopen (open a note by index)
+    nopen
+        Open the first file in results.txt.
+    nopen <index>
+        Open the file at the specified index from results.txt.
+
+  nsearch (search notes and save results)
+    nsearch <string>
+        Search notes for a string, save matching filenames to results.txt.
+
+  ncurrent (manage and navigate folders)
+    ncurrent
+        List subfolders and show the currently selected folder.
+    ncurrent <index>
+        Set the current folder by selecting its index.
+    ncurrent -pwd
+        Show the full path of the current folder.
+    ncurrent -cd <subfolder>
+        Change into a subfolder by name.
+    ncurrent -up / ..
+        Move up one folder level.
+    ncurrent -new <folder>
+        Create a new subfolder inside the current folder.
+    ncurrent -move <i> -to <j>
+        Move folder #i into folder #j.
+    ncurrent -move <i> -to up
+        Move folder #i up one level.
+    ncurrent -rename <i> <new_name>
+        Rename folder #i.
+    ncurrent -help
+        Show help information.
+
+  nfzf (fuzzy find folders)
+    nfzf
+        Search subfolders using fzf and open a file in Neovim.
+
+  nrandom (open random note)
+    nrandom
+        Open a random note with substantial content (≥10 lines).
+        Great for:
+        • Rediscovering old notes
+        • Daily review/reflection
+        • Serendipitous connections
+        Shows which note is being opened before launching nvim.
+
+  nlist2 (interactive note selector)
+    nlist2
+        Interactive curses-based note selector with preview pane.
+        Features:
+        • Vim-style navigation (j/k, g/G)
+        • Live preview of note content
+        • Delete functionality with visual feedback
+
+    nlist2 -tags
+        List all tags with counts (same as nlist -tags).
+
+    nlist2 -tag <tags>
+        Interactive selector filtered by tags.
+        Example: nlist2 -tag food,recipe → Only show notes with #food OR #recipe
+
+    Interactive Keys:
+        j/k         Navigate down/up
+        g/G         Jump to top/bottom
+        d           Toggle delete mark (highlighted in red)
+        Enter       Open selected note (or delete marked notes if any)
+        q/Esc       Quit
+
+    Tips:
+    • Use nlist2 when you want to preview notes before opening
+    • Press 'd' on multiple notes to batch delete
+    • Marked notes stay highlighted until you press Enter or unmark with 'd'
+
+  ════════════════════════════════════════════════════════════════════════════
+  LINKING AND BACKLINKS
+  ════════════════════════════════════════════════════════════════════════════
+
+  Link Format
+    Notes use wiki-style double-bracket links with 8-character hex IDs:
+        [[14ba882b|Title of Note]]  ← Link with title
+        [[14ba882b]]                ← Link with ID only
+
+    Every note automatically gets a unique ID when created or saved:
+        <!-- id: 14ba882b -->
+    (This appears at the top of the file as an HTML comment)
+
+  Creating Links (in Neovim)
+    Keybinding: <leader>ln
+
+    Interactive fuzzy search to find and insert a link:
+    1. Press <leader>ln
+    2. Choose search method:
+       • (c)ontent  - Search file contents (default)
+       • (f)ilenames - Search by filename
+       • (t)itles - Search by note titles
+    3. Type to filter, select with Enter
+    4. Link is inserted: [[ID|Title]]
+
+    Example Workflow:
+    - You're writing: "I learned about cooking today, see..."
+    - Press <leader>ln
+    - Search for "pasta"
+    - Select "My Pasta Recipe" note
+    - Result: "...see [[a4f3e2b1|My Pasta Recipe]]"
+
+  Jumping to Linked Notes (in Neovim)
+    Keybinding: <leader>gf
+
+    Behavior:
+    • Cursor on link: Jump directly to that note
+    • Not on link: Show menu of all outgoing links in current note
+    • Single link in note: Auto-jump to it
+
+    Example:
+    - Cursor on [[14ba882b|Cooking Tips]]
+    - Press <leader>gf
+    - Opens the Cooking Tips note
+
+  Backlinks (Automatic)
+    Backlinks show you which notes link TO the current note.
+
+    Run sync-map.py to generate backlinks:
+        python3 sync-map.py
+
+    This scans all notes and adds a "#### Backlinks:" section at the bottom:
+
+        #### Backlinks:
+         - [[971109ef|Daily Journal 2025-04-06]]
+         - [[5c3174a5|Recipe Collection]]
+
+    Options:
+        python3 sync-map.py --strip-only    Remove all backlink sections
+        python3 sync-map.py --map-only      Rebuild ID map only
+        python3 sync-map.py --inject-only   Inject backlinks (use existing map)
+        python3 sync-map.py --dry-run       Show what would change
+
+    The script:
+    • Creates .note_map.json (ID → path/title mapping)
+    • Logs to .note_map.log
+    • Makes backups before modifying files
+    • Reports broken links
+
+  Creating a Linked Note Workflow
+    Scenario: You're in note A, think of related topic B
+
+    Method 1 (Manual):
+    1. In note A, add a link placeholder: [[|New Topic]]
+    2. Press <leader>ln to search for the new note
+    3. If it doesn't exist, create it with: nnote new-topic.md
+    4. Go back to note A, press <leader>ln and link to new-topic.md
+    5. Run sync-map.py to generate backlink in new-topic.md
+
+    Method 2 (Using existing note creation):
+    1. Create the new note: nnote related-topic.md
+    2. In the new note, press <leader>ln to link back to original
+    3. Go back to original note, press <leader>ln to link forward
+    4. Run sync-map.py to sync all backlinks
+
+    After running sync-map.py, the new note will show:
+        #### Backlinks:
+         - [[<original-id>|Original Note Title]]
+
+  Tags in Notes
+    Add hashtags anywhere in your notes:
+        #food #recipe #italian
+
+    Headings (with space) are NOT tags:
+        # My Recipe          ← This is a heading, not a tag
+        #recipe             ← This IS a tag
+
+    Search by tags:
+        nlist -tags              List all tags
+        nlist -tag food          Show notes with #food
+        nlist -tag food,recipe   Show notes with #food OR #recipe
+        nlist2 -tag food         Interactive selector for #food notes
+
+    Tags are cached in .note_tags_cache.json and auto-update when files change.
+
+  Tips for Linking
+    • Use <leader>ln liberally - linking is fast and helps connect ideas
+    • Run sync-map.py periodically to keep backlinks fresh
+    • Jump through notes with <leader>gf for quick exploration
+    • Use tags (#) for categories, links ([[ID]]) for relationships
+    • Check .note_map.log if you encounter linking issues
+
+  nweb (web-based graph viewer)
+    nweb
+        Start a web server to visualize your notes as an interactive graph.
+        Similar to Obsidian's graph view.
+
+        Features:
+        • Interactive graph visualization of note relationships
+        • Text search across note titles and content
+        • Tag-based filtering (select multiple tags)
+        • Click nodes to preview note content
+        • Double-click nodes for file path (to open in nvim)
+        • Real-time filtering as you search/select tags
+
+        Usage:
+        1. Run: nweb
+        2. Open browser: http://localhost:8080
+        3. Use search bar to find notes
+        4. Click tags to filter graph
+        5. Press Ctrl+C to stop server
+
+        Port already in use?
+        If you see "Address already in use", kill the existing process:
+            lsof -ti:8080 | xargs kill
+
+        Tips:
+        • Hover over nodes to see titles and tags
+        • Select multiple tags for broader filtering (OR logic)
+        • Search and tag filters work together
+        • Use navigation buttons in graph for zoom/pan
+
+

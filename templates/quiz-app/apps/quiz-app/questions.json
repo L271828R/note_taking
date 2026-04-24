@@ -1,0 +1,17 @@
+{
+  "title": "My Quiz",
+  "questions": [
+    {
+      "topic": "Example Topic",
+      "q": "What is the primary purpose of test planning?",
+      "opts": [
+        "To execute test cases",
+        "To define objectives and select an approach within constraints",
+        "To log defects",
+        "To archive testware"
+      ],
+      "a": 1,
+      "exp": "Test planning defines objectives and selects the best approach given project constraints."
+    }
+  ]
+}

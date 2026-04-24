@@ -1,0 +1,6 @@
+# Python requirements for note management scripts
+# nlist4 uses curses (built-in, no external dependencies needed)
+
+# Development dependencies
+pytest>=7.0.0
+pytest-cov>=4.0.0

@@ -1,0 +1,278 @@
+#!/usr/bin/env bash
+#
+# nlist.sh
+# Enhanced to:
+# 1) List .md files (with timestamps and titles)
+# 2) List subfolders and count their .md files
+# 3) Write to $NOTES_RESULTS_FILE
+# 4) Invoke plugins
+# 5) Support -delete
+# 6) Support -rename (custom or date style)
+# 7) Support -move
+# 8) Support -h|--help
+
+# resolve script dir (for finding nlist_plugins/)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}" )" && pwd)"
+
+NOTE_DIR="$NOTES_FOLDERS_PATH"
+CURRENT_FILE="$NOTES_CURRENT_FILE"
+RESULTS_FILE="$NOTES_RESULTS_FILE"
+PLUGIN_DIR="$SCRIPT_DIR/nlist_plugins"
+
+### ─────────────────────────────────────────────────────────────────────────────
+### Help
+### ─────────────────────────────────────────────────────────────────────────────
+if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+  cat <<EOF
+
+Usage: nlist.sh [options]
+
+Options:
+  -h, --help
+        Show this help message and exit
+  -delete <num>
+        Move the Nth Markdown file in the current folder
+        to /tmp/notes/delete (instead of listing)
+  -rename <num> <name>
+        Rename the Nth Markdown file to <name> (will append .md if you omit it)
+  -rename <num> -style date
+        Prepend today's date (YYYY-MM-DD-) to the existing basename
+  -move <num> <subfolder>
+        Move the Nth Markdown file into a subfolder of the current folder
+        You can specify a full folder name or a partial name (prefix match).
+        Use ".." to move up to the parent folder.
+
+What it does:
+  • Lists all .md files in the current notes folder (with timestamp & Title)
+  • Lists all subfolders (with .md‑file counts)
+  • Allows moving, renaming, or deleting notes easily
+  • Supports partial subfolder matching for move
+  • Writes the full listing to \$NOTES_RESULTS_FILE
+  • Runs any executable plugins in nlist_plugins/
+  • Prints the listing to stdout
+
+Environment Variables:
+  NOTES_FOLDERS_PATH   Directory where your notes subfolders live
+  NOTES_CURRENT_FILE   File containing your “current” folder name
+  NOTES_RESULTS_FILE   Where the listing is written
+
+Examples:
+  nlist.sh
+  nlist.sh -delete 3
+  nlist.sh -rename 2 meeting_notes
+  nlist.sh -rename 1 -style date
+  nlist.sh -move 5 research
+  nlist.sh -move 2 ..
+  nlist.sh -move 1 res      # (partial match, moves into 'research' folder)
+  nlist.sh --help
+
+EOF
+  exit 0
+fi
+
+# 1) ensure NOTE_DIR exists
+if [[ ! -d "$NOTE_DIR" ]]; then
+  echo "Error: NOTE_DIR '$NOTE_DIR' not found." >&2
+  exit 1
+fi
+
+# 2) determine TARGET
+current=""
+if [[ -f "$CURRENT_FILE" ]]; then
+  current=$(awk 'NF{gsub(/^[ \t]+|[ \t]+$/, ""); print; exit}' "$CURRENT_FILE")
+fi
+if [[ -n "$current" && -d "$NOTE_DIR/$current" ]]; then
+  TARGET="$NOTE_DIR/$current"
+else
+  TARGET="$NOTE_DIR"
+fi
+
+# 📂 Gather folders early (needed for -move partial matching!)
+mapfile -t folder_list < <(
+  find "$TARGET" -mindepth 1 -maxdepth 1 -type d | sort
+)
+
+# 3) gather .md files
+mapfile -t file_list < <(
+  shopt -s nullglob
+  for f in "$TARGET"/*.md; do
+    [[ -f "$f" ]] || continue
+    echo "$(stat -f "%m" "$f")|$(basename "$f")"
+  done | sort -nr
+)
+
+# 3) gather .md files
+mapfile -t file_list < <(
+  shopt -s nullglob
+  for f in "$TARGET"/*.md; do
+    [[ -f "$f" ]] || continue
+    echo "$(stat -f "%m" "$f")|$(basename "$f")"
+  done | sort -nr
+)
+
+# 4) If -delete is passed
+if [[ "$1" == "-delete" && "$2" =~ ^[0-9]+$ ]]; then
+  idx=$2
+  if (( idx < 1 || idx > ${#file_list[@]} )); then
+    echo "Error: Invalid file number '$idx'." >&2
+    exit 1
+  fi
+  IFS='|' read -r _ filename <<< "${file_list[idx-1]}"
+  src="$TARGET/$filename"
+  if [[ ! -f "$src" ]]; then
+    echo "Error: File '$src' not found." >&2
+    exit 1
+  fi
+  delete_dir="/tmp/notes/delete"
+  mkdir -p "$delete_dir"
+  mv "$src" "$delete_dir"
+  echo "Moved '$src' → '$delete_dir/'."
+  exit 0
+fi
+
+# 5) If -rename is passed (custom or date style)
+if [[ "$1" == "-rename" && "$2" =~ ^[0-9]+$ ]]; then
+  idx=$2
+  if (( idx < 1 || idx > ${#file_list[@]} )); then
+    echo "Error: Invalid file number '$idx'." >&2
+    exit 1
+  fi
+  IFS='|' read -r _ oldname <<< "${file_list[idx-1]}"
+  src="$TARGET/$oldname"
+  if [[ ! -f "$src" ]]; then
+    echo "Error: File '$src' not found." >&2
+    exit 1
+  fi
+
+  if [[ "$3" == "-style" && "$4" == "date" ]]; then
+    base="${oldname%.md}"
+    base="${base##[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]-}"
+    prefix="$(date '+%Y-%m-%d')"
+    newbase="${prefix}-${base}"
+  elif [[ -n "$3" ]]; then
+    newbase="${3%.md}"
+  else
+    echo "Error: Missing new name or style. See -h for usage." >&2
+    exit 1
+  fi
+
+  dst="$TARGET/${newbase}.md"
+  if [[ -e "$dst" ]]; then
+    echo "Error: Destination '${newbase}.md' already exists." >&2
+    exit 1
+  fi
+
+  mv "$src" "$dst" \
+    && echo "Renamed '$oldname' → '${newbase}.md'." \
+    || { echo "Error: Rename failed." >&2; exit 1; }
+  exit 0
+fi
+
+# 5.5) If -move is passed
+if [[ "$1" == "-move" && "$2" =~ ^[0-9]+$ && -n "$3" ]]; then
+  idx=$2
+  input="$3"
+
+  if (( idx < 1 || idx > ${#file_list[@]} )); then
+    echo "Error: Invalid file number '$idx'." >&2
+    exit 1
+  fi
+
+  IFS='|' read -r _ filename <<< "${file_list[idx-1]}"
+  src="$TARGET/$filename"
+
+  if [[ "$input" == ".." ]]; then
+    dest_dir="$(dirname "$TARGET")"
+  else
+    # Try to match partial subfolder name
+    matched_folder=""
+    for folder in "${folder_list[@]}"; do
+      basename="$(basename "$folder")"
+      if [[ "$basename" == "$input"* ]]; then
+        matched_folder="$basename"
+        break
+      fi
+    done
+
+    if [[ -z "$matched_folder" ]]; then
+      echo "Error: No matching subfolder found for '$input'." >&2
+      exit 1
+    fi
+
+    dest_dir="$TARGET/$matched_folder"
+  fi
+
+  if [[ ! -f "$src" ]]; then
+    echo "Error: Source file '$src' not found." >&2
+    exit 1
+  fi
+
+  if [[ ! -d "$dest_dir" ]]; then
+    echo "Error: Destination folder '$dest_dir' not found." >&2
+    exit 1
+  fi
+
+  dest="$dest_dir/$(basename "$filename")"
+  if [[ -e "$dest" ]]; then
+    echo "Error: Destination file '$dest' already exists." >&2
+    exit 1
+  fi
+
+  mv "$src" "$dest" \
+    && echo "Moved '$filename' → '$(basename "$dest_dir")/'." \
+    || { echo "Error: Move failed." >&2; exit 1; }
+  exit 0
+fi
+
+# 6) Gather subfolders and .md file counts
+mapfile -t folder_list < <(
+  find "$TARGET" -mindepth 1 -maxdepth 1 -type d | sort
+)
+
+# 7) Write listing
+GREEN='\033[0;32m'
+BLUE='\033[1;34m'
+GRAY='\033[1;30m'
+RESET='\033[0m'
+
+{
+  echo "📄 Markdown Files"
+  echo "----------------"
+  for i in "${!file_list[@]}"; do
+    IFS='|' read -r epoch name <<< "${file_list[i]}"
+    dt=$(date -r "$epoch" "+%Y-%m-%d %H:%M:%S")
+    title=$(grep -m1 '^# Title:' "$TARGET/$name" 2>/dev/null | sed 's/^# Title:[[:space:]]*//')
+    if [[ -n "$title" ]]; then
+      printf "%d. %s — %b%s%b %b%s%b\n" \
+        $((i+1)) "$name" "$GRAY" "$title" "$RESET" "$GREEN" "$dt" "$RESET"
+    else
+      printf "%d. %s %b%s%b\n" \
+        $((i+1)) "$name" "$GREEN" "$dt" "$RESET"
+    fi
+  done
+
+  echo ""
+  echo "📁 Subfolders"
+  echo "----------------"
+  for folder in "${folder_list[@]}"; do
+    subname=$(basename "$folder")
+    count=$(find "$folder" -type f -name '*.md' 2>/dev/null | wc -l | tr -d '[:space:]')
+    printf "• %b%s%b (%s files)\n" "$BLUE" "$subname" "$RESET" "$count"
+  done
+} > "$RESULTS_FILE"
+
+# 8) Run plugins
+if [[ -d "$PLUGIN_DIR" ]]; then
+  for plugin in "$PLUGIN_DIR"/*.sh; do
+    [[ -x "$plugin" ]] || continue
+    "$plugin" "$RESULTS_FILE" "$TARGET"
+  done
+fi
+
+# 9) Print
+echo ""
+echo "current > $current"
+echo "---------------------------------------------------------------------------------"
+cat "$RESULTS_FILE"
+echo ""
+

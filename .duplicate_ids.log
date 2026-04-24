@@ -1,0 +1,54 @@
+2025-05-04 01:47:30  === fix_duplicate_ids.py invoked ===
+2025-05-04 01:47:30  Vault = /Users/luisrueda/projects/notes
+2025-05-04 01:47:30  Dry-run = True, Backups = True
+2025-05-04 01:47:30  Found 75 markdown files
+2025-05-04 01:47:30  🚨 Found 5 duplicate IDs
+2025-05-04 01:47:30  Re-seeded folders/ideas/2025-04-17-0d7fa0.md  cb511a84 → e5a560d5
+2025-05-04 01:47:30  Re-seeded folders/ideas/2025-05-02-3dffe2.md  cb511a84 → 4b509f14
+2025-05-04 01:47:30  Re-seeded folders/ideas/2025-05-03-becc3d.md  cb511a84 → cbcc0b0f
+2025-05-04 01:47:30  Re-seeded folders/5_journals/life_journal/2025-04-12.md  cb511a84 → add3b386
+2025-05-04 01:47:30  Re-seeded folders/5_journals/life_journal/2025-04-07.md  cb511a84 → f934e4af
+2025-05-04 01:47:30  Re-seeded folders/3_resources/software/markdown-examples/markdown-examples.md  cb511a84 → 26fc1b5c
+2025-05-04 01:47:30  Re-seeded folders/3_resources/software/learning/trees.learning.md  cb511a84 → 80351542
+2025-05-04 01:47:30  Re-seeded folders/5_journals/life_journal/2025-04-13.2.md  b2e7fec4 → 3b9bca48
+2025-05-04 01:47:30  Re-seeded folders/5_journals/trading_journal/vix-related-trading/if-vix-is-high-sell-options-on-mes-easy.md  5eeb9c6f → 728dddf4
+2025-05-04 01:47:30  Re-seeded folders/5_journals/trading_journal/selling-vertical-options/selling-puts-slow-productivity.md  ae687c2b → 9f2e26b1
+2025-05-04 01:47:30  Re-seeded folders/3_resources/software/c_programming/some_new_note_about_c_programming.md  971109ef → a3c56ab5
+2025-05-04 01:47:30  ✅ 11 files reseeded.  Report: /Users/luisrueda/projects/notes/duplicate_id_changes.json
+2025-05-04 01:47:30  === fix_duplicate_ids.py finished ===
+2025-05-04 01:47:49  === fix_duplicate_ids.py invoked ===
+2025-05-04 01:47:49  Vault = /Users/luisrueda/projects/notes
+2025-05-04 01:47:49  Dry-run = True, Backups = True
+2025-05-04 01:47:49  Found 75 markdown files
+2025-05-04 01:47:49  🚨 Found 5 duplicate IDs
+2025-05-04 01:47:49  Re-seeded folders/ideas/2025-04-17-0d7fa0.md  cb511a84 → 4cf65c8a
+2025-05-04 01:47:49  Re-seeded folders/ideas/2025-05-02-3dffe2.md  cb511a84 → 5c1969e9
+2025-05-04 01:47:49  Re-seeded folders/ideas/2025-05-03-becc3d.md  cb511a84 → 049cd2e4
+2025-05-04 01:47:49  Re-seeded folders/5_journals/life_journal/2025-04-12.md  cb511a84 → 2403c9a0
+2025-05-04 01:47:49  Re-seeded folders/5_journals/life_journal/2025-04-07.md  cb511a84 → e3fe85a3
+2025-05-04 01:47:49  Re-seeded folders/3_resources/software/markdown-examples/markdown-examples.md  cb511a84 → 828a8318
+2025-05-04 01:47:49  Re-seeded folders/3_resources/software/learning/trees.learning.md  cb511a84 → a9f55269
+2025-05-04 01:47:49  Re-seeded folders/5_journals/life_journal/2025-04-13.2.md  b2e7fec4 → d9e44235
+2025-05-04 01:47:49  Re-seeded folders/5_journals/trading_journal/vix-related-trading/if-vix-is-high-sell-options-on-mes-easy.md  5eeb9c6f → d93cea77
+2025-05-04 01:47:49  Re-seeded folders/5_journals/trading_journal/selling-vertical-options/selling-puts-slow-productivity.md  ae687c2b → 1d45be58
+2025-05-04 01:47:49  Re-seeded folders/3_resources/software/c_programming/some_new_note_about_c_programming.md  971109ef → 4d43a62c
+2025-05-04 01:47:49  ✅ 11 files reseeded.  Report: /Users/luisrueda/projects/notes/duplicate_id_changes.json
+2025-05-04 01:47:49  === fix_duplicate_ids.py finished ===
+2025-05-04 01:48:03  === fix_duplicate_ids.py invoked ===
+2025-05-04 01:48:03  Vault = /Users/luisrueda/projects/notes
+2025-05-04 01:48:03  Dry-run = False, Backups = True
+2025-05-04 01:48:03  Found 75 markdown files
+2025-05-04 01:48:03  🚨 Found 5 duplicate IDs
+2025-05-04 01:48:03  Re-seeded folders/ideas/2025-04-17-0d7fa0.md  cb511a84 → b6bee5f7
+2025-05-04 01:48:03  Re-seeded folders/ideas/2025-05-02-3dffe2.md  cb511a84 → 083ea605
+2025-05-04 01:48:03  Re-seeded folders/ideas/2025-05-03-becc3d.md  cb511a84 → caa06531
+2025-05-04 01:48:03  Re-seeded folders/5_journals/life_journal/2025-04-12.md  cb511a84 → dfbe4083
+2025-05-04 01:48:03  Re-seeded folders/5_journals/life_journal/2025-04-07.md  cb511a84 → ac08ea6d
+2025-05-04 01:48:03  Re-seeded folders/3_resources/software/markdown-examples/markdown-examples.md  cb511a84 → 106afdce
+2025-05-04 01:48:03  Re-seeded folders/3_resources/software/learning/trees.learning.md  cb511a84 → 1c300ec3
+2025-05-04 01:48:03  Re-seeded folders/5_journals/life_journal/2025-04-13.2.md  b2e7fec4 → de3ee6bd
+2025-05-04 01:48:03  Re-seeded folders/5_journals/trading_journal/vix-related-trading/if-vix-is-high-sell-options-on-mes-easy.md  5eeb9c6f → 9f5476f8
+2025-05-04 01:48:03  Re-seeded folders/5_journals/trading_journal/selling-vertical-options/selling-puts-slow-productivity.md  ae687c2b → cec265b4
+2025-05-04 01:48:03  Re-seeded folders/3_resources/software/c_programming/some_new_note_about_c_programming.md  971109ef → bac64373
+2025-05-04 01:48:03  ✅ 11 files reseeded.  Report: /Users/luisrueda/projects/notes/duplicate_id_changes.json
+2025-05-04 01:48:03  === fix_duplicate_ids.py finished ===

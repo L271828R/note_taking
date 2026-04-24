@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quiz</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    #root { width: 100%; max-width: 780px; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// ── Styles ──────────────────────────────────────────────────────────────────
+
+const S = {
+  card: {
+    background: '#1a1d27',
+    borderRadius: 16,
+    padding: '2rem',
+    boxShadow: '0 4px 32px rgba(0,0,0,0.5)',
+  },
+  btn: (variant = 'primary') => ({
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '0.6rem 1.4rem',
+    borderRadius: 8,
+    border: 'none',
+    cursor: 'pointer',
+    fontWeight: 600,
+    fontSize: '0.9rem',
+    transition: 'all 0.15s',
+    background: variant === 'primary' ? '#6366f1' : variant === 'ghost' ? 'transparent' : '#2d3148',
+    color: variant === 'ghost' ? '#94a3b8' : '#fff',
+    outline: 'none',
+  }),
+  tag: (color) => ({
+    display: 'inline-block',
+    padding: '2px 10px',
+    borderRadius: 20,
+    fontSize: '0.72rem',
+    fontWeight: 700,
+    letterSpacing: '0.04em',
+    background: color + '22',
+    color: color,
+    marginBottom: '0.75rem',
+  }),
+};
+
+const OPT_COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b'];
+
+// ── Home ─────────────────────────────────────────────────────────────────────
+
+function Home({ questions, title, onStart }) {
+  const topics = [...new Set(questions.map(q => q.topic).filter(Boolean))];
+  const [topicFilter, setTopicFilter] = useState('All');
+  const [mode, setMode] = useState('quiz');
+
+  const filtered = topicFilter === 'All'
+    ? questions
+    : questions.filter(q => q.topic === topicFilter);
+
+  return (
+    <div style={S.card}>
+      <h1 style={{ fontSize: '1.5rem', marginBottom: '0.4rem', color: '#a5b4fc' }}>{title}</h1>
+      <p style={{ color: '#64748b', marginBottom: '2rem', fontSize: '0.9rem' }}>
+        {questions.length} questions across {topics.length || 1} topic{topics.length !== 1 ? 's' : ''}
+      </p>
+
+      {topics.length > 0 && (
+        <div style={{ marginBottom: '1.25rem' }}>
+          <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '0.4rem' }}>TOPIC</label>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {['All', ...topics].map(t => (
+              <button key={t} onClick={() => setTopicFilter(t)}
+                style={{ ...S.btn(topicFilter === t ? 'primary' : 'secondary'), padding: '0.4rem 0.9rem', fontSize: '0.8rem' }}>
+                {t}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div style={{ marginBottom: '2rem' }}>
+        <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '0.4rem' }}>MODE</label>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {[['quiz', '📝 Quiz'], ['flashcard', '🃏 Flashcards']].map(([m, label]) => (
+            <button key={m} onClick={() => setMode(m)}
+              style={{ ...S.btn(mode === m ? 'primary' : 'secondary'), padding: '0.4rem 0.9rem', fontSize: '0.8rem' }}>
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span style={{ color: '#64748b', fontSize: '0.85rem' }}>
+          {filtered.length} question{filtered.length !== 1 ? 's' : ''} selected
+        </span>
+        <button style={S.btn('primary')} onClick={() => onStart(filtered, mode)}>Start →</button>
+      </div>
+    </div>
+  );
+}
+
+// ── Quiz ─────────────────────────────────────────────────────────────────────
+
+function Quiz({ questions, onFinish }) {
+  const [qs] = useState(() => shuffle(questions));
+  const [idx, setIdx] = useState(0);
+  const [selected, setSelected] = useState(null);
+  const [showExp, setShowExp] = useState(false);
+  const [score, setScore] = useState(0);
+
+  const q = qs[idx];
+  const answered = selected !== null;
+  const correct = selected === q.answer;
+
+  function choose(i) {
+    if (answered) return;
+    setSelected(i);
+    if (i === q.answer) setScore(s => s + 1);
+  }
+
+  function next() {
+    if (idx + 1 < qs.length) {
+      setIdx(i => i + 1);
+      setSelected(null);
+      setShowExp(false);
+    } else {
+      onFinish(qs.length, score + (correct ? 1 : 0));
+    }
+  }
+
+  return (
+    <div style={S.card}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+        <span style={{ fontSize: '0.8rem', color: '#64748b' }}>Question {idx + 1} / {qs.length}</span>
+        <span style={{ fontSize: '0.8rem', color: '#64748b' }}>Score: {score}</span>
+      </div>
+      <div style={{ height: 4, background: '#2d3148', borderRadius: 4, marginBottom: '1.5rem' }}>
+        <div style={{ height: '100%', width: `${((idx + 1) / qs.length) * 100}%`, background: '#6366f1', borderRadius: 4, transition: 'width 0.3s' }} />
+      </div>
+
+      {q.topic && <div style={S.tag('#a5b4fc')}>{q.topic}</div>}
+      <p style={{ fontSize: '1.05rem', lineHeight: 1.6, marginBottom: '1.5rem', color: '#e2e8f0' }}>{q.question}</p>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: '1.25rem' }}>
+        {q.options.map((opt, i) => {
+          let bg = '#23263a', border = '2px solid #2d3148', color = '#cbd5e1';
+          if (answered) {
+            if (i === q.answer) { bg = '#14532d'; border = '2px solid #22c55e'; color = '#86efac'; }
+            else if (i === selected) { bg = '#450a0a'; border = '2px solid #ef4444'; color = '#fca5a5'; }
+          }
+          return (
+            <button key={i} onClick={() => choose(i)} style={{
+              background: bg, border, borderRadius: 10, padding: '0.75rem 1rem',
+              textAlign: 'left', cursor: answered ? 'default' : 'pointer',
+              color, fontSize: '0.9rem', lineHeight: 1.5, transition: 'all 0.15s',
+            }}>
+              <span style={{ fontWeight: 700, marginRight: 8, color: OPT_COLORS[i % OPT_COLORS.length] }}>
+                {String.fromCharCode(65 + i)}.
+              </span>
+              {opt}
+            </button>
+          );
+        })}
+      </div>
+
+      {answered && (
+        <div style={{ marginBottom: '1.25rem' }}>
+          <div style={{
+            padding: '0.75rem 1rem', borderRadius: 10, marginBottom: 8,
+            background: correct ? '#14532d22' : '#450a0a22',
+            border: `1px solid ${correct ? '#22c55e44' : '#ef444444'}`,
+            color: correct ? '#86efac' : '#fca5a5', fontWeight: 700, fontSize: '0.9rem',
+          }}>
+            {correct ? '✓ Correct!' : '✗ Incorrect'}
+          </div>
+          {q.explanation && !showExp && (
+            <button style={{ ...S.btn('ghost'), fontSize: '0.8rem' }} onClick={() => setShowExp(true)}>
+              Show explanation
+            </button>
+          )}
+          {q.explanation && showExp && (
+            <div style={{
+              padding: '0.75rem 1rem', borderRadius: 10,
+              background: '#1e2235', border: '1px solid #2d3148',
+              color: '#94a3b8', fontSize: '0.875rem', lineHeight: 1.6,
+            }}>
+              {q.explanation}
+            </div>
+          )}
+        </div>
+      )}
+
+      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        {answered
+          ? <button style={S.btn('primary')} onClick={next}>{idx + 1 < qs.length ? 'Next →' : 'Finish'}</button>
+          : <span style={{ color: '#334155', fontSize: '0.85rem' }}>Select an answer</span>}
+      </div>
+    </div>
+  );
+}
+
+// ── Flashcards ────────────────────────────────────────────────────────────────
+
+function Flashcards({ questions, onFinish }) {
+  const [qs] = useState(() => shuffle(questions));
+  const [idx, setIdx] = useState(0);
+  const [flipped, setFlipped] = useState(false);
+
+  const q = qs[idx];
+
+  return (
+    <div style={S.card}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
+        <span style={{ fontSize: '0.8rem', color: '#64748b' }}>{idx + 1} / {qs.length}</span>
+        <button style={{ ...S.btn('ghost'), fontSize: '0.8rem' }} onClick={onFinish}>Exit</button>
+      </div>
+
+      <div onClick={() => setFlipped(f => !f)} style={{
+        cursor: 'pointer', minHeight: 200,
+        background: flipped ? '#1e2a1e' : '#1e1e2a',
+        border: `2px solid ${flipped ? '#22c55e44' : '#6366f144'}`,
+        borderRadius: 14, padding: '2rem',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        textAlign: 'center', marginBottom: '1.25rem', transition: 'background 0.2s, border-color 0.2s',
+      }}>
+        <div style={S.tag(flipped ? '#22c55e' : '#6366f1')}>
+          {flipped ? 'Answer' : (q.topic || 'Question')}
+        </div>
+        <p style={{ fontSize: '1rem', lineHeight: 1.65, color: '#e2e8f0' }}>
+          {flipped ? q.options[q.answer] : q.question}
+        </p>
+        {flipped && q.explanation && (
+          <p style={{ marginTop: '1rem', fontSize: '0.82rem', color: '#64748b', lineHeight: 1.6 }}>{q.explanation}</p>
+        )}
+        <p style={{ marginTop: '1.5rem', fontSize: '0.75rem', color: '#334155' }}>
+          {flipped ? 'Tap to flip back' : 'Tap to reveal answer'}
+        </p>
+      </div>
+
+      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+        <button style={S.btn('secondary')} disabled={idx === 0}
+          onClick={() => { setIdx(i => i - 1); setFlipped(false); }}>← Prev</button>
+        {idx + 1 < qs.length
+          ? <button style={S.btn('primary')} onClick={() => { setIdx(i => i + 1); setFlipped(false); }}>Next →</button>
+          : <button style={S.btn('primary')} onClick={onFinish}>Finish</button>}
+      </div>
+    </div>
+  );
+}
+
+// ── Results ───────────────────────────────────────────────────────────────────
+
+function Results({ total, score, onRestart }) {
+  const pct = Math.round((score / total) * 100);
+  const grade = pct >= 80 ? { label: 'Excellent', color: '#22c55e' }
+              : pct >= 60 ? { label: 'Good',      color: '#f59e0b' }
+              :             { label: 'Keep studying', color: '#ef4444' };
+  return (
+    <div style={{ ...S.card, textAlign: 'center' }}>
+      <div style={{ fontSize: '3.5rem', marginBottom: '0.5rem' }}>
+        {pct >= 80 ? '🎉' : pct >= 60 ? '👍' : '📖'}
+      </div>
+      <h2 style={{ fontSize: '1.6rem', marginBottom: '0.25rem', color: grade.color }}>{grade.label}</h2>
+      <p style={{ color: '#64748b', marginBottom: '2rem' }}>{score} / {total} correct ({pct}%)</p>
+      <div style={{ height: 12, background: '#2d3148', borderRadius: 6, marginBottom: '2rem', overflow: 'hidden' }}>
+        <div style={{ height: '100%', width: `${pct}%`, background: grade.color, borderRadius: 6, transition: 'width 0.8s ease' }} />
+      </div>
+      <button style={S.btn('primary')} onClick={onRestart}>Try again</button>
+    </div>
+  );
+}
+
+// ── Loading / Error ───────────────────────────────────────────────────────────
+
+function LoadingCard({ message }) {
+  return (
+    <div style={{ ...S.card, textAlign: 'center', color: '#64748b' }}>
+      <p>{message}</p>
+    </div>
+  );
+}
+
+// ── App ───────────────────────────────────────────────────────────────────────
+
+function App() {
+  const [questions, setQuestions] = useState(null);
+  const [title, setTitle]         = useState('Quiz');
+  const [error, setError]         = useState(null);
+  const [screen, setScreen]       = useState('home');
+  const [activeQs, setActiveQs]   = useState([]);
+  const [result, setResult]       = useState({ total: 0, score: 0 });
+
+  // Read ?bank= query param (defaults to questions.json in same dir)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const bankUrl = params.get('bank') || 'questions.json';
+    const t = params.get('title');
+
+    fetch(bankUrl)
+      .then(r => {
+        if (!r.ok) throw new Error(`${r.status} — could not load ${bankUrl}`);
+        return r.json();
+      })
+      .then(data => {
+        // Support { title, questions: [...] }  OR  plain array
+        if (Array.isArray(data)) {
+          setQuestions(data);
+          if (t) setTitle(t);
+        } else {
+          setQuestions(data.questions || []);
+          setTitle(t || data.title || 'Quiz');
+        }
+      })
+      .catch(e => setError(e.message));
+  }, []);
+
+  if (error)     return <LoadingCard message={`⚠️  ${error}`} />;
+  if (!questions) return <LoadingCard message="Loading questions…" />;
+  if (questions.length === 0) return <LoadingCard message="No questions found in questions.json" />;
+
+  function start(qs, mode) { setActiveQs(qs); setScreen(mode); }
+  function finish(total, score) { setResult({ total, score }); setScreen('results'); }
+
+  return (
+    <div>
+      {screen === 'home'      && <Home questions={questions} title={title} onStart={start} />}
+      {screen === 'quiz'      && <Quiz questions={activeQs} onFinish={finish} />}
+      {screen === 'flashcard' && <Flashcards questions={activeQs} onFinish={() => setScreen('home')} />}
+      {screen === 'results'   && <Results {...result} onRestart={() => setScreen('home')} />}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
