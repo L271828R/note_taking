@@ -44,6 +44,44 @@ All notes live under a “vault” directory with automated ID injection, JSON m
 
 ---
 
+## Shell Setup (Aliases & Environment)
+
+Add the following to your `~/.zshrc` (or `~/.bashrc`) on any machine you clone this repo to:
+
+```zsh
+# Notes - environment
+export NOTES_PATH=~/projects/notes
+export NOTES_FOLDERS_PATH=~/projects/notes/folders
+export NOTES_CURRENT_FILE=/tmp/notes_current_$$
+export NOTES_RESULTS_FILE=/tmp/notes_results_$$
+export NOTES_LUA=~/projects/notes/nvim-lua
+export PATH="$NOTES_PATH/bin_:$PATH"
+
+# Notes - aliases
+alias nc='ncurrent'
+alias ng='ngrep'
+alias nl='nlist'
+alias nl2='nlist2'
+alias nn='nnote'
+alias no='nopen'
+alias ns='nfzf'      # fuzzy find and open note
+alias nh='nhelp'
+
+# Notes - quick folder jumps
+nj()   { ncurrent root && ncurrent -cd 5_journals; }    # journal
+nres() { ncurrent root && ncurrent -cd 3_resources; }   # resources
+```
+
+Then reload your shell:
+
+```bash
+source ~/.zshrc
+```
+
+> **Tip:** Adjust `NOTES_FOLDERS_PATH` if your vault's `folders/` directory lives somewhere other than `~/projects/notes/folders`.
+
+---
+
 ## Directory Layout
 
     .  
